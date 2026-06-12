@@ -1,0 +1,122 @@
+#!/usr/bin/env python3
+"""Start or stop a DAQ application with its assigned ports.
+
+Runs ON a DAQ host. Reads ~/controlroom/etc/apps.yaml, exports
+CRS_PORT_<NAME> for every named port the app owns, then execs the
+app's standardized start-/stop- script (found in ~/controlroom/bin or
+the app's install_path). DISPLAY is inherited from the VNC session.
+
+Usage:
+  crs-app start <app-id>
+  crs-app stop <app-id>
+  crs-app list
+
+Stdlib only by design, with a minimal fallback parser for the subset
+of YAML used by apps.yaml when PyYAML is unavailable on the host.
+"""
+
+import os
+import sys
+
+
+def _load_yaml(path):
+    try:
+        import yaml
+        with open(path) as fh:
+            return yaml.safe_load(fh) or {}
+    except ImportError:
+        return _tiny_yaml(path)
+
+
+def _tiny_yaml(path):
+    """Parse the restricted apps.yaml structure without PyYAML:
+    a top-level 'apps:' list of flat mappings, with one level of
+    nested inline dicts ({k: v, ...}) for ports/desktop."""
+    apps = []
+    current = None
+    with open(path) as fh:
+        for raw in fh:
+            line = raw.split("#", 1)[0].rstrip()
+            if not line.strip():
+                continue
+            stripped = line.strip()
+            if stripped == "apps:":
+                continue
+            if stripped.startswith("- "):
+                current = {}
+                apps.append(current)
+                stripped = stripped[2:]
+            if current is None or ":" not in stripped:
+                continue
+            key, _, value = stripped.partition(":")
+            key, value = key.strip(), value.strip()
+            if value.startswith("{") and value.endswith("}"):
+                inner = {}
+                for pair in value[1:-1].split(","):
+                    if ":" in pair:
+                        k, _, v = pair.partition(":")
+                        v = v.strip().strip("'\"")
+                        inner[k.strip()] = int(v) if v.isdigit() else v
+                current[key] = inner
+            elif value.startswith("[") and value.endswith("]"):
+                current[key] = [x.strip().strip("'\"")
+                                for x in value[1:-1].split(",") if x.strip()]
+            elif value:
+                value = value.strip("'\"")
+                current[key] = int(value) if value.isdigit() else value
+    return {"apps": apps}
+
+
+def _find_script(app, which):
+    script = app[which]
+    crs_bin = os.path.expanduser(os.path.join(
+        os.environ.get("CRS_HOME", "~/controlroom"), "bin", script))
+    if os.access(crs_bin, os.X_OK):
+        return crs_bin
+    install = os.path.expanduser(app.get("install_path", ""))
+    candidate = os.path.join(install, script)
+    if install and os.access(candidate, os.X_OK):
+        return candidate
+    return None
+
+
+def main():
+    if len(sys.argv) < 2 or sys.argv[1] not in ("start", "stop", "list"):
+        sys.exit(__doc__.strip().split("\n\n")[2])
+
+    apps_yaml = os.path.expanduser(os.environ.get(
+        "CRS_APPS_CONFIG",
+        os.path.join(os.environ.get("CRS_HOME", "~/controlroom"), "etc", "apps.yaml")))
+    if not os.path.exists(apps_yaml):
+        sys.exit("error: apps config not found: %s" % apps_yaml)
+    apps = {a["id"]: a for a in _load_yaml(apps_yaml).get("apps", [])}
+
+    if sys.argv[1] == "list":
+        for app_id in sorted(apps):
+            app = apps[app_id]
+            ports = " ".join("%s=%s" % kv for kv in sorted(app.get("ports", {}).items()))
+            print("%-20s %-28s %s" % (app_id, app.get("repo", ""), ports))
+        return 0
+
+    action = sys.argv[1]
+    if len(sys.argv) != 3:
+        sys.exit("usage: crs-app %s <app-id>" % action)
+    app_id = sys.argv[2]
+    if app_id not in apps:
+        sys.exit("error: unknown app %r (crs-app list to see them)" % app_id)
+    app = apps[app_id]
+
+    script = _find_script(app, action)
+    if not script:
+        sys.exit("error: %s script %r not found in ~/controlroom/bin or %s" %
+                 (action, app[action], app.get("install_path", "?")))
+
+    env = dict(os.environ)
+    for pname, pvalue in app.get("ports", {}).items():
+        env["CRS_PORT_%s" % pname.upper()] = str(pvalue)
+
+    os.execve(script, [script], env)
+
+
+if __name__ == "__main__":
+    sys.exit(main())

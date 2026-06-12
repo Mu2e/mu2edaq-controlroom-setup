@@ -1,0 +1,135 @@
+# Mu2e DAQ application inventory.
+# Drives: desktop icon generation (crs-provision-desktop), port assignment
+# (crs-app exports CRS_PORT_<NAME> for each entry in ports), and the bin
+# installer's start/stop symlinks.
+#
+# Fields:
+#   id:         short identifier (used in crs-app start <id>)
+#   title:      human-readable name shown on the desktop icon
+#   repo:       repository under mu2edaq-main providing the app
+#   start/stop: standardized script names (symlinked into ~/controlroom/bin)
+#   install_path: where the repo is checked out on the DAQ hosts
+#   ports:      named port assignments, exported as CRS_PORT_<NAME>
+#   sessions:   which VNC sessions get desktop icons for this app
+#   desktop:    icon name and whether to run in a terminal
+
+apps:
+  - id: controlcenter
+    title: "DAQ Control Center"
+    repo: mu2edaq-controlcenter
+    start: start-mu2edaq-controlcenter.sh
+    stop: stop-mu2edaq-controlcenter.sh
+    install_path: ~/mu2edaq-main/mu2edaq-controlcenter
+    ports: {cmd: 9876}
+    sessions: [shift-main]
+    desktop: {icon: preferences-system, terminal: false}
+
+  - id: dashboard
+    title: "DAQ Message Dashboard"
+    repo: mu2edaq-dashboard
+    start: start-mu2edaq-dashboard.sh
+    stop: stop-mu2edaq-dashboard.sh
+    install_path: ~/mu2edaq-main/mu2edaq-dashboard
+    ports: {http: 5001, zmq: 5555}
+    sessions: [daq-main]
+    desktop: {icon: utilities-system-monitor, terminal: false}
+
+  - id: bigredbox
+    title: "Big Red Box Alerts"
+    repo: mu2edaq-bigredbox
+    start: start-mu2edaq-bigredbox.sh
+    stop: stop-mu2edaq-bigredbox.sh
+    install_path: ~/mu2edaq-main/mu2edaq-bigredbox
+    ports: {udp: 37020}
+    sessions: [shift-main, shift-aux]
+    desktop: {icon: dialog-warning, terminal: false}
+
+  - id: downtime-logger
+    title: "Downtime Logger"
+    repo: mu2edaq-downtime-logger
+    start: start-mu2edaq-downtime-logger.sh
+    stop: stop-mu2edaq-downtime-logger.sh
+    install_path: ~/mu2edaq-main/mu2edaq-downtime-logger
+    ports: {http: 8088}
+    sessions: [shift-main]
+    desktop: {icon: appointment-soon, terminal: false}
+
+  - id: diskwatcher
+    title: "Disk Watcher"
+    repo: mu2edaq-diskwatcher
+    start: start-mu2edaq-diskwatcher.sh
+    stop: stop-mu2edaq-diskwatcher.sh
+    install_path: ~/mu2edaq-main/mu2edaq-diskwatcher
+    ports: {http: 5002}
+    sessions: [daq-main, daq-dl2]
+    desktop: {icon: drive-harddisk, terminal: false}
+
+  - id: fts
+    title: "File Transfer Service"
+    repo: mu2edaq-fts
+    start: start-mu2edaq-fts.sh
+    stop: stop-mu2edaq-fts.sh
+    install_path: ~/mu2edaq-main/mu2edaq-fts
+    ports: {http: 5003}
+    sessions: [daq-main, daq-dl2]
+    desktop: {icon: network-transmit-receive, terminal: false}
+
+  - id: heartbeatmonitor
+    title: "Heartbeat Monitor"
+    repo: mu2edaq-heartbeatmonitor
+    start: start-mu2edaq-heartbeatmonitor.sh
+    stop: stop-mu2edaq-heartbeatmonitor.sh
+    install_path: ~/mu2edaq-main/mu2edaq-heartbeatmonitor
+    ports: {http: 8081, udp: 9999}     # http moved off 8080 (resource-manager owns it)
+    sessions: [shift-aux]
+    desktop: {icon: emblem-favorite, terminal: false}
+
+  - id: resource-manager
+    title: "Resource Manager"
+    repo: mu2edaq-resource-manager
+    start: start-mu2edaq-resource-manager.sh
+    stop: stop-mu2edaq-resource-manager.sh
+    install_path: ~/mu2edaq-main/mu2edaq-resource-manager
+    ports: {http: 8080}
+    sessions: [daq-main]
+    desktop: {icon: view-grid, terminal: false}
+
+  - id: runlog-db
+    title: "Run Log Database"
+    repo: mu2edaq-runlog-db
+    start: start-mu2edaq-runlog-db.sh
+    stop: stop-mu2edaq-runlog-db.sh
+    install_path: ~/mu2edaq-main/mu2edaq-runlog-db
+    ports: {http: 8000}
+    sessions: [shift-aux]
+    desktop: {icon: x-office-spreadsheet, terminal: false}
+
+  - id: trigger-scalers
+    title: "Trigger Scalers"
+    repo: mu2edaq-trigger-scalers
+    start: start-mu2edaq-trigger-scalers.sh
+    stop: stop-mu2edaq-trigger-scalers.sh
+    install_path: ~/mu2edaq-main/mu2edaq-trigger-scalers
+    ports: {udp: 5557, zmq: 5556}      # udp moved off 5555 (dashboard ZMQ owns it)
+    sessions: [shift-main]
+    desktop: {icon: accessories-calculator, terminal: false}
+
+  - id: dataformat-viewer
+    title: "Data Format Viewer"
+    repo: mu2edaq-dataformat-viewer
+    start: start-mu2edaq-dataformat-viewer.sh
+    stop: stop-mu2edaq-dataformat-viewer.sh
+    install_path: ~/mu2edaq-main/mu2edaq-dataformat-viewer
+    ports: {listen: 7755}
+    sessions: [daq-aux]
+    desktop: {icon: text-x-generic, terminal: false}
+
+  - id: cfocontrol
+    title: "CFO Control"
+    repo: mu2edaq-CFOControl
+    start: start-mu2edaq-cfocontrol.sh
+    stop: stop-mu2edaq-cfocontrol.sh
+    install_path: ~/mu2edaq-main/mu2edaq-CFOControl
+    ports: {macromaker: 5000}
+    sessions: [daq-aux]
+    desktop: {icon: utilities-terminal, terminal: true}

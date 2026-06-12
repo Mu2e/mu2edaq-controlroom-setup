@@ -1,0 +1,14 @@
+#!/bin/sh
+# xstartup for Mu2e control room VNC sessions: XFCE desktop.
+# Installed to ~/controlroom/etc/xstartup by install-controlroom.sh.
+unset SESSION_MANAGER
+unset DBUS_SESSION_BUS_ADDRESS
+
+# Make the control room bin area available to everything launched
+# from the desktop (icons, terminals).
+PATH="$HOME/controlroom/bin:$PATH"
+export PATH
+
+[ -r "$HOME/.Xresources" ] && xrdb "$HOME/.Xresources"
+
+exec startxfce4

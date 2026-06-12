@@ -1,0 +1,52 @@
+.TH CRS\-GUI 1 "2026-06-12" "Mu2e DAQ" "Mu2e DAQ Manual"
+.SH NAME
+crs\-gui \- Mu2e control room manager (tunnels and service discovery)
+.SH SYNOPSIS
+.B crs\-gui
+.RB [ \-\-config
+.IR FILE ]
+.SH DESCRIPTION
+A PyQt6 application with two tabs.
+.SS Tunnels tab
+One row per configured VNC session showing tunnel state (probed via the
+ssh control socket every 15 seconds) with
+.BR Open ,
+.BR Close ,
+and
+.B Connect
+buttons.
+Connect opens the tunnel when needed and launches
+.B vncviewer \-Shared
+on the session's local port.
+All ssh operations run in worker threads; the UI never blocks.
+.SS Discovery tab
+Sends a mu2edaq\-discovery DISCOVER query and lists every responding
+service: name, application type, host, port, start time, PID, and
+instance id.
+Two scan modes:
+.TP
+.B Via gateway (production)
+Runs
+.B mu2edaq\-discover \-\-json
+on a selected cluster node over ssh and parses the result.
+This is the default, since multicast does not traverse the FNAL
+gateway.
+.TP
+.B Local multicast
+Queries the local network segment directly (useful on-site or for
+development).
+.PP
+Double-clicking a VNC row opens the matching session tunnel and
+attaches the viewer.
+.SH OPTIONS
+.TP
+.BI \-\-config " FILE"
+Path to controlroom.yaml.
+.SH SEE ALSO
+.BR crs\-tunnel (1),
+.BR crs\-remote (1),
+.BR mu2edaq\-discover (1)
+.SH REPOSITORY
+.UR https://github.com/Mu2e/mu2edaq-controlroom-setup
+https://github.com/Mu2e/mu2edaq-controlroom-setup
+.UE

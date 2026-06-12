@@ -1,0 +1,51 @@
+.TH INSTALL\-CONTROLROOM 1 "2026-06-12" "Mu2e DAQ" "Mu2e DAQ Manual"
+.SH NAME
+install\-controlroom.sh \- install the control room bin area on a DAQ host
+.SH SYNOPSIS
+.B install\-controlroom.sh
+.SH DESCRIPTION
+Runs
+.B on
+a DAQ host as the session-owner account, normally invoked by
+.B crs\-remote install
+which ships this script together with the rest of the payload as a tar
+stream over ssh.
+.PP
+The installer:
+.IP 1. 4
+creates
+.BR ~/controlroom/{bin,etc,log} " and " ~/.crs ;
+.IP 2. 4
+installs the session scripts
+.RB ( start/stop/status\-vnc\-session.sh ),
+the discovery responder sidecar, the
+.B crs\-app
+port-assignment wrapper, and
+.B crs\-provision\-desktop
+into
+.BR ~/controlroom/bin ;
+.IP 3. 4
+installs
+.BR controlroom.yaml ", " apps.yaml ", and " xstartup
+into
+.BR ~/controlroom/etc ;
+.IP 4. 4
+appends a marker-guarded, idempotent PATH stanza to
+.B ~/.bash_profile
+.RB ( ">>> mu2edaq\-controlroom >>>" );
+.IP 5. 4
+symlinks each application's standardized
+.BR start\-*.sh / stop\-*.sh
+from its checkout
+.RB ( install_path
+in apps.yaml) into the bin area, when present on the host.
+.PP
+Safe to re-run; existing installs are refreshed in place.
+.SH ENVIRONMENT
+.TP
+.B CRS_HOME
+Override the install area (default ~/controlroom).
+.SH SEE ALSO
+.BR crs\-remote (1),
+.BR crs\-app (1),
+.BR start\-vnc\-session (1)

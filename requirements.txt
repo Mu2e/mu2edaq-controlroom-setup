@@ -1,0 +1,7 @@
+# Runtime:
+PyYAML
+PyQt6            # GUI (crs-gui)
+# Sibling package (installed from the submodule checkout by bootstrap.sh):
+# mu2edaq-discovery
+# Development / test:
+pytest

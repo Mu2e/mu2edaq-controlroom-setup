@@ -1,0 +1,128 @@
+#!/usr/bin/env python3
+"""Provision XFCE desktop icons for the DAQ applications.
+
+Runs ON a DAQ host as the session-owner account. Reads
+~/controlroom/etc/apps.yaml and ~/controlroom/etc/controlroom.yaml,
+determines which apps belong on this host/account's session desktops,
+and writes ~/Desktop/<app>-{start,stop}.desktop launchers that call
+crs-app (which exports the CRS_PORT_* assignments and execs the app's
+start/stop script with DISPLAY inherited from the VNC session).
+
+Usage:
+  crs-provision-desktop --session <name> [--desktop-dir DIR]
+  crs-provision-desktop --all-local        # all sessions owned by $USER here
+
+Stdlib only; falls back to crs-app's restricted YAML parser when
+PyYAML is unavailable.
+"""
+
+import argparse
+import os
+import socket
+import stat
+import subprocess
+import sys
+
+CRS_HOME = os.path.expanduser(os.environ.get("CRS_HOME", "~/controlroom"))
+
+
+def _load_yaml(path):
+    try:
+        import yaml
+        with open(path) as fh:
+            return yaml.safe_load(fh) or {}
+    except ImportError:
+        import importlib.machinery
+        import importlib.util
+        loader = importlib.machinery.SourceFileLoader(
+            "crs_app", os.path.join(CRS_HOME, "bin", "crs-app"))
+        spec = importlib.util.spec_from_loader("crs_app", loader)
+        mod = importlib.util.module_from_spec(spec)
+        loader.exec_module(mod)
+        return mod._tiny_yaml(path)
+
+
+def render_desktop_file(app, action, terminal=False):
+    """Return the text of a .desktop launcher for crs-app <action> <id>."""
+    title = app.get("title", app["id"])
+    label = "Start %s" % title if action == "start" else "Stop %s" % title
+    icon = app.get("desktop", {}).get("icon", "applications-system")
+    if action == "stop":
+        icon = "process-stop"
+    return "\n".join([
+        "[Desktop Entry]",
+        "Version=1.0",
+        "Type=Application",
+        "Name=%s" % label,
+        "Comment=%s the %s DAQ application" % (action.capitalize(), title),
+        "Exec=%s %s %s" % (os.path.join(CRS_HOME, "bin", "crs-app"),
+                           action, app["id"]),
+        "Icon=%s" % icon,
+        "Terminal=%s" % ("true" if terminal else "false"),
+        "Categories=System;",
+        "",
+    ])
+
+
+def provision(sessions, apps, desktop_dir):
+    """Write .desktop pairs for every app assigned to any of `sessions`.
+    Returns the list of files written."""
+    os.makedirs(desktop_dir, exist_ok=True)
+    session_names = {s for s in sessions}
+    written = []
+    for app in apps:
+        if not session_names.intersection(app.get("sessions", [])):
+            continue
+        terminal = bool(app.get("desktop", {}).get("terminal", False))
+        for action in ("start", "stop"):
+            path = os.path.join(desktop_dir,
+                                "%s-%s.desktop" % (app["id"], action))
+            with open(path, "w") as fh:
+                fh.write(render_desktop_file(app, action, terminal=terminal))
+            os.chmod(path, os.stat(path).st_mode | stat.S_IXUSR | stat.S_IXGRP)
+            # Mark trusted so XFCE doesn't show the "untrusted launcher" overlay.
+            subprocess.run(["gio", "set", path, "metadata::trusted", "true"],
+                           capture_output=True)
+            written.append(path)
+    return written
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        description="Generate desktop icons for DAQ apps on this host.")
+    group = parser.add_mutually_exclusive_group(required=True)
+    group.add_argument("--session", action="append",
+                       help="session name (repeatable)")
+    group.add_argument("--all-local", action="store_true",
+                       help="all sessions on this host owned by $USER")
+    parser.add_argument("--desktop-dir",
+                        default=os.path.expanduser("~/Desktop"),
+                        help="where to write .desktop files")
+    args = parser.parse_args()
+
+    apps_cfg = _load_yaml(os.path.join(CRS_HOME, "etc", "apps.yaml"))
+    apps = apps_cfg.get("apps", [])
+
+    if args.all_local:
+        cr_cfg = _load_yaml(os.path.join(CRS_HOME, "etc", "controlroom.yaml"))
+        me = os.environ.get("USER", "")
+        short = socket.gethostname().split(".")[0]
+        sessions = [s["name"] for s in cr_cfg.get("sessions", [])
+                    if s.get("account") == me
+                    and str(s.get("host", "")).split(".")[0] == short]
+        if not sessions:
+            sys.exit("error: no sessions for %s on %s in controlroom.yaml" %
+                     (me, short))
+    else:
+        sessions = args.session
+
+    written = provision(sessions, apps, args.desktop_dir)
+    for path in written:
+        print("wrote %s" % path)
+    if not written:
+        print("no apps assigned to session(s): %s" % ", ".join(sessions))
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

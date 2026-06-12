@@ -1,0 +1,75 @@
+.TH START\-VNC\-SESSION 1 "2026-06-12" "Mu2e DAQ" "Mu2e DAQ Manual"
+.SH NAME
+start\-vnc\-session.sh, stop\-vnc\-session.sh, status\-vnc\-session.sh \-
+manage a control room VNC session on a DAQ host
+.SH SYNOPSIS
+.B start\-vnc\-session.sh
+.I session\-name display\-number
+.RB [ \-g
+.IR WxH ]
+.RB [ \-d
+.IR depth ]
+.br
+.B stop\-vnc\-session.sh
+.I session\-name display\-number
+.br
+.B status\-vnc\-session.sh
+.I session\-name display\-number
+.RI [ name " " display " ...]"
+.SH DESCRIPTION
+These scripts run
+.B on
+a DAQ host as the session-owner account (mu2eshift, mu2edaq, mu2edcs).
+They are installed to
+.B ~/controlroom/bin
+by
+.BR install\-controlroom.sh .
+.PP
+.B start\-vnc\-session.sh
+starts a TigerVNC server on the given display
+.RB ( "vncserver \-localhost yes" ,
+XFCE via
+.BR ~/controlroom/etc/xstartup )
+and then spawns
+.B vnc\-discovery\-responder.py
+\(em a sidecar that answers mu2edaq\-discovery DISCOVER queries on the
+session's behalf (VNC itself has no discovery support) and multicasts a
+periodic announce.
+The responder PID is written to
+.BR ~/.crs/vnc\-responder\-:N.pid .
+Already-running displays are skipped
+.RB ( SKIP ),
+making the script idempotent.
+.PP
+.B stop\-vnc\-session.sh
+kills the responder first (so the session disappears from discovery
+before the port closes), then
+.BR "vncserver \-kill" .
+.PP
+.B status\-vnc\-session.sh
+prints one machine-parseable line per queried display:
+.IR name|:display|port|running\:\:stopped|alive\:\:dead\:\:none .
+.SH OPTIONS
+.TP
+.BI \-g " WxH"
+Session geometry (default
+.BR $CRS_GEOMETRY " or 1920x1080)."
+.TP
+.BI \-d " depth"
+Color depth (default
+.BR $CRS_DEPTH " or 24)."
+.SH ENVIRONMENT
+.TP
+.B CRS_HOME
+Install area (default ~/controlroom).
+.TP
+.B CRS_ANNOUNCE_INTERVAL
+Seconds between unsolicited responder announces (default 30, 0 = off).
+.SH FILES
+.TP
+.B ~/controlroom/log/vnc\-*.log
+Per-session VNC and responder logs.
+.SH SEE ALSO
+.BR crs\-remote (1),
+.BR install\-controlroom (1),
+.BR vncserver (1)

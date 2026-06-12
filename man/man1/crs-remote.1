@@ -1,0 +1,86 @@
+.TH CRS\-REMOTE 1 "2026-06-12" "Mu2e DAQ" "Mu2e DAQ Manual"
+.SH NAME
+crs\-remote \- run control room operations on the DAQ hosts over ssh
+.SH SYNOPSIS
+.B crs\-remote
+.IR start | stop | status | install | provision
+.RB [ \-\-session
+.IR NAME ]
+.RB [ \-\-host
+.IR H ]
+.RB [ \-\-all ]
+.RB [ \-\-config
+.IR FILE ]
+.RB [ \-\-ssh\-config
+.IR FILE ]
+.SH DESCRIPTION
+.B crs\-remote
+executes the server-side control room scripts on the DAQ hosts as the
+session-owner accounts, routed through the gateway
+.RB ( ProxyJump )
+with Kerberos authentication.
+Output lines are prefixed with
+.IR [account@host] .
+.SH COMMANDS
+.TP
+.B start
+Run
+.B start\-vnc\-session.sh
+for each selected session: starts the TigerVNC server
+.RB ( "\-localhost yes" ,
+XFCE via xstartup) and its discovery responder sidecar.
+.TP
+.B stop
+Run
+.BR stop\-vnc\-session.sh :
+kills the responder, then the VNC server.
+.TP
+.B status
+Run
+.BR status\-vnc\-session.sh ;
+prints parseable
+.I name|display|port|state|responder
+lines.
+Defaults to
+.B \-\-all
+when no target is given.
+.TP
+.B install
+Ship the server payload (scripts, configs, xstartup) as a tar stream
+over ssh and run
+.B install\-controlroom.sh
+on the host: creates
+.BR ~/controlroom/{bin,etc,log} ,
+adds the PATH stanza to
+.BR ~/.bash_profile ,
+and symlinks app start/stop scripts into the bin area.
+Runs once per (host, account) pair.
+.TP
+.B provision
+Run
+.B crs\-provision\-desktop
+on the host to (re)generate the XFCE desktop icons for the selected
+session(s).
+.SH OPTIONS
+See
+.BR crs\-tunnel (1)
+for
+.BR \-\-session / \-\-host / \-\-all / \-\-config / \-\-ssh\-config .
+.SH EXAMPLES
+First-time setup of one host, then everything:
+.EX
+    crs\-remote install \-\-session daq\-dl2
+    crs\-remote start   \-\-session daq\-dl2
+    crs\-remote install \-\-all
+    crs\-remote start   \-\-all
+    crs\-remote status
+.EE
+.SH SEE ALSO
+.BR crs\-tunnel (1),
+.BR crs\-gui (1),
+.BR start\-vnc\-session (1),
+.BR install\-controlroom (1)
+.SH REPOSITORY
+.UR https://github.com/Mu2e/mu2edaq-controlroom-setup
+https://github.com/Mu2e/mu2edaq-controlroom-setup
+.UE

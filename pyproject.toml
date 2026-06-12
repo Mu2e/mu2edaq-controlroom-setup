@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mu2edaq-controlroom-setup"
+version = "1.0.0"
+description = "Mu2e DAQ control room VNC sessions, ssh tunnels, desktop provisioning, and discovery browser"
+readme = "README.md"
+requires-python = ">=3.9"
+license = {text = "BSD-3-Clause"}
+authors = [{name = "Mu2e DAQ Group"}]
+dependencies = ["PyYAML"]
+
+[project.optional-dependencies]
+gui = ["PyQt6"]
+discovery = ["mu2edaq-discovery"]
+dev = ["pytest"]
+
+[project.scripts]
+crs-tunnel = "mu2edaq_controlroom_setup.cli:tunnel_main"
+crs-remote = "mu2edaq_controlroom_setup.cli:remote_main"
+
+[project.gui-scripts]
+crs-gui = "mu2edaq_controlroom_setup.gui.main:main"
+
+[project.urls]
+Repository = "https://github.com/Mu2e/mu2edaq-controlroom-setup"
+
+[tool.setuptools.packages.find]
+where = ["src"]

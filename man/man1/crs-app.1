@@ -1,0 +1,61 @@
+.TH CRS\-APP 1 "2026-06-12" "Mu2e DAQ" "Mu2e DAQ Manual"
+.SH NAME
+crs\-app, crs\-provision\-desktop \- start DAQ applications with assigned
+ports and generate their desktop icons
+.SH SYNOPSIS
+.B crs\-app
+.IR start | stop
+.I app\-id
+.br
+.B crs\-app list
+.br
+.B crs\-provision\-desktop
+.B \-\-session
+.I NAME
+.RB [ \-\-desktop\-dir
+.IR DIR ]
+.br
+.B crs\-provision\-desktop \-\-all\-local
+.SH DESCRIPTION
+.B crs\-app
+runs on a DAQ host.
+It reads
+.BR ~/controlroom/etc/apps.yaml ,
+exports
+.BI CRS_PORT_ NAME
+for every named port assigned to the application, then execs the
+application's standardized
+.BR start\- / stop\- script
+(resolved in
+.B ~/controlroom/bin
+or the app's
+.IR install_path ).
+.B DISPLAY
+is inherited, so icons inside a VNC desktop launch apps onto that
+session's display.
+.PP
+.B crs\-provision\-desktop
+writes
+.IB app \-start.desktop
+/
+.IB app \-stop.desktop
+launchers (calling crs\-app) into
+.B ~/Desktop
+for every application that apps.yaml assigns to the given session.
+With
+.B \-\-all\-local
+it derives the session list from controlroom.yaml entries matching this
+host and
+.BR $USER .
+.PP
+Both tools are stdlib-only and fall back to a restricted built-in YAML
+parser when PyYAML is not installed on the host.
+.SH EXAMPLES
+.EX
+    crs\-app list
+    crs\-app start dashboard
+    crs\-provision\-desktop \-\-all\-local
+.EE
+.SH SEE ALSO
+.BR crs\-remote (1),
+.BR install\-controlroom (1)

@@ -1,0 +1,102 @@
+.TH CRS\-TUNNEL 1 "2026-06-12" "Mu2e DAQ" "Mu2e DAQ Manual"
+.SH NAME
+crs\-tunnel \- manage ssh tunnels to the control room VNC sessions
+.SH SYNOPSIS
+.B crs\-tunnel
+.IR open | close | status | connect
+.RB [ \-\-session
+.IR NAME ]
+.RB [ \-\-host
+.IR H ]
+.RB [ \-\-all ]
+.RB [ \-\-config
+.IR FILE ]
+.RB [ \-\-ssh\-config
+.IR FILE ]
+.RB [ \-\-viewer
+.IR BIN ]
+.SH DESCRIPTION
+.B crs\-tunnel
+opens, closes, probes, or attaches to ssh tunnels carrying the control
+room VNC traffic.
+Each session in
+.B controlroom.yaml
+maps a client-side
+.I local_port
+to
+.I 5900+display
+on its DAQ host, routed through the gateway with
+.B ProxyJump
+and authenticated with Kerberos (GSSAPI).
+One master ssh per session keeps a control socket in
+.BR ~/.crs/ ,
+so tunnels survive and can be probed
+.RB ( "ssh \-O check" )
+or closed
+.RB ( "ssh \-O exit" )
+without pkill.
+.SH COMMANDS
+.TP
+.B open
+Open the tunnel(s).
+Requires a valid Kerberos ticket
+.RB ( "klist \-s" ).
+.TP
+.B close
+Close the tunnel(s) via their control sockets and remove stale sockets.
+.TP
+.B status
+Print one line per session: state, local port mapping, account.
+Defaults to
+.B \-\-all
+when no target is given.
+.TP
+.B connect
+Open the tunnel if needed, then launch
+.B vncviewer \-Shared
+against the local port.
+.SH OPTIONS
+.TP
+.BI \-\-session " NAME"
+Operate on one named session.
+.TP
+.BI \-\-host " H"
+Operate on every session on a host (short or FQDN).
+.TP
+.B \-\-all
+Operate on every configured session.
+.TP
+.BI \-\-config " FILE"
+Path to controlroom.yaml (default: ./config/, or
+.BR CRS_CONFIG ).
+.TP
+.BI \-\-ssh\-config " FILE"
+Alternate ssh config passed as
+.BR "ssh \-F" ;
+used by the test harness to alias cluster hosts to localhost.
+.TP
+.BI \-\-viewer " BIN"
+VNC viewer binary for
+.BR connect .
+.SH EXAMPLES
+.EX
+    crs\-tunnel open \-\-all
+    crs\-tunnel status
+    crs\-tunnel connect \-\-session daq\-main
+    crs\-tunnel close \-\-host mu2e\-dl\-01
+.EE
+.SH FILES
+.TP
+.B ~/.crs/ssh\-ctrl\-*
+SSH control sockets, one per open tunnel.
+.TP
+.B config/controlroom.yaml
+Central session/gateway configuration.
+.SH SEE ALSO
+.BR crs\-remote (1),
+.BR crs\-gui (1),
+.BR ssh (1)
+.SH REPOSITORY
+.UR https://github.com/Mu2e/mu2edaq-controlroom-setup
+https://github.com/Mu2e/mu2edaq-controlroom-setup
+.UE
