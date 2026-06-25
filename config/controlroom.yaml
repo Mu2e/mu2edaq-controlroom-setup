@@ -13,50 +13,29 @@ discovery:
   announce_interval: 30             # seconds between unsolicited VNC announces (0 = off)
 
 # Shared accounts available on the cluster.
-accounts: [mu2eshift, mu2edaq, mu2ecalo, mu2edcs, mu2etrk]
+accounts: [mu2eshift, mu2edaq, mu2ecalo, mu2edcs, mu2etrk, mu2etrig]
 
-# The six VNC viewport sessions. vnc_port = 5900 + display.
+# Currently-running VNC viewport sessions on mu2e-mgr-01. vnc_port = 5900 + display.
 # local_port is the client-side tunnel listen port (legacy 595x convention).
 sessions:
-  - name: shift-main
+  - name: dcs-main
     host: mu2e-mgr-01.fnal.gov
-    account: mu2eshift
+    account: mu2edcs
     display: 1
-    geometry: 2560x1440
+    geometry: 1920x1080
     depth: 24
     local_port: 5951
-  - name: shift-aux
+  - name: shift-main
     host: mu2e-mgr-01.fnal.gov
     account: mu2eshift
     display: 2
     geometry: 1920x1080
     depth: 24
     local_port: 5952
-  - name: daq-main
-    host: mu2e-dl-01.fnal.gov
-    account: mu2edaq
-    display: 1
-    geometry: 2560x1440
-    depth: 24
-    local_port: 5953
-  - name: daq-aux
-    host: mu2e-dl-01.fnal.gov
-    account: mu2edaq
-    display: 2
+  - name: trig-main
+    host: mu2e-mgr-01.fnal.gov
+    account: mu2etrig
+    display: 3
     geometry: 1920x1080
     depth: 24
-    local_port: 5954
-  - name: daq-dl2
-    host: mu2e-dl-02.fnal.gov
-    account: mu2edaq
-    display: 1
-    geometry: 2560x1440
-    depth: 24
-    local_port: 5955
-  - name: dcs-main
-    host: mu2e-dcs-01.fnal.gov
-    account: mu2edcs
-    display: 1
-    geometry: 2560x1440
-    depth: 24
-    local_port: 5956
+    local_port: 5953

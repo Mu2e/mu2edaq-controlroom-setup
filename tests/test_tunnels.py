@@ -84,6 +84,28 @@ def test_open_runs_ssh(config, tmp_path, monkeypatch):
         assert "5953:localhost:5901" in argv
 
 
+def test_open_logs_in_as_personal_user_not_account(config, tmp_path, monkeypatch):
+    """The forward must SSH in as personal_user, not the shared VNC account."""
+    monkeypatch.setenv("HOME", str(tmp_path))
+    manager = TunnelManager(config)
+    s = config.sessions[0]
+    with mock.patch.object(manager, "status", return_value="closed"), \
+         mock.patch("mu2edaq_controlroom_setup.sshutil.check_ticket"), \
+         mock.patch("mu2edaq_controlroom_setup.tunnels.subprocess.run") as run:
+        run.return_value = mock.Mock(returncode=0, stderr="")
+        manager.open(s)
+        argv = run.call_args[0][0]
+        assert argv[-1] == "anorman@mu2e-dl-01.fnal.gov"
+        assert s.account not in argv[-1]
+
+
+def test_login_target_falls_back_to_account(config):
+    """With no personal_user configured, fall back to the session account."""
+    config.personal_user = ""
+    manager = TunnelManager(config)
+    assert manager._login_target(config.sessions[0]) == "mu2edaq@mu2e-dl-01.fnal.gov"
+
+
 def test_open_failure_raises(config, tmp_path, monkeypatch):
     monkeypatch.setenv("HOME", str(tmp_path))
     manager = TunnelManager(config)

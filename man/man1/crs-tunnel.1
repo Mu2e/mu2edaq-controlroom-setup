@@ -52,9 +52,14 @@ Defaults to
 when no target is given.
 .TP
 .B connect
-Open the tunnel if needed, then launch
-.B vncviewer \-Shared
-against the local port.
+Open the tunnel if needed, then launch a VNC client against the local
+port. On macOS this runs
+\fBopen vnc://localhost:\fIPORT\fR
+(the built\-in Screen Sharing client); elsewhere it runs
+.BR "vncviewer \-Shared" .
+An explicit
+.B \-\-viewer
+overrides this on any platform.
 .SH OPTIONS
 .TP
 .BI \-\-session " NAME"
@@ -78,12 +83,15 @@ used by the test harness to alias cluster hosts to localhost.
 .BI \-\-viewer " BIN"
 VNC viewer binary for
 .BR connect .
+Overrides the macOS
+.B open vnc://
+default.
 .SH EXAMPLES
 .EX
     crs\-tunnel open \-\-all
     crs\-tunnel status
-    crs\-tunnel connect \-\-session daq\-main
-    crs\-tunnel close \-\-host mu2e\-dl\-01
+    crs\-tunnel connect \-\-session dcs\-main
+    crs\-tunnel close \-\-host mu2e\-mgr\-01
 .EE
 .SH FILES
 .TP

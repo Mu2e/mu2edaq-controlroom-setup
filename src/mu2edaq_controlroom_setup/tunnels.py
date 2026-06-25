@@ -19,13 +19,25 @@ class TunnelManager:
     def _socket(self, session):
         return sshutil.control_socket_path(session.host, session.local_port)
 
+    def _login_target(self, session):
+        """ssh login destination for the forward.
+
+        A tunnel only needs SSH access to the host; the forward target
+        (localhost:vnc_port) is resolved on the server side regardless of
+        login user, so log in as the personal user rather than the shared
+        VNC account (which usually won't accept our Kerberos principal).
+        Fall back to the session account if no personal user is configured.
+        """
+        user = self.config.personal_user or session.account
+        return "%s@%s" % (user, session.host)
+
     def status(self, session):
         """'open' | 'closed' for one session's tunnel."""
         socket_path = self._socket(session)
         if not os.path.exists(socket_path):
             return "closed"
         result = subprocess.run(
-            sshutil.tunnel_check_argv(session.target, socket_path),
+            sshutil.tunnel_check_argv(self._login_target(session), socket_path),
             capture_output=True,
         )
         if result.returncode == 0:
@@ -43,7 +55,7 @@ class TunnelManager:
             return "already-open"
         sshutil.check_ticket()
         argv = sshutil.tunnel_open_argv(
-            session.target, session.local_port, session.vnc_port,
+            self._login_target(session), session.local_port, session.vnc_port,
             self._socket(session), gateway=self.config.gateway,
             ssh_config=self.ssh_config,
         )
@@ -59,7 +71,7 @@ class TunnelManager:
         if not os.path.exists(socket_path):
             return "not-open"
         subprocess.run(
-            sshutil.tunnel_close_argv(session.target, socket_path),
+            sshutil.tunnel_close_argv(self._login_target(session), socket_path),
             capture_output=True,
         )
         if os.path.exists(socket_path):

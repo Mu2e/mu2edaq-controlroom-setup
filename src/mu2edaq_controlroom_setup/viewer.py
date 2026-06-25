@@ -3,11 +3,15 @@
 Follows the AttachVNC pattern from
 mu2edaq-controlroom/Mu2eCR/ControlRoom/scripts/Tools.py:
 vncviewer -Shared so multiple operators can attach to one session.
+
+On macOS, with no explicit --viewer, hand the vnc:// URL to `open` so the
+built-in Screen Sharing client connects (no TigerVNC install required).
 """
 
 import os
 import shutil
 import subprocess
+import sys
 
 MAC_VIEWER = "/Applications/TigerVNC Viewer.app/Contents/MacOS/TigerVNC Viewer"
 
@@ -21,14 +25,24 @@ def find_viewer():
     return None
 
 
+def _spawn(argv):
+    """Launch a viewer detached; caller does not wait."""
+    return subprocess.Popen(
+        argv, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+    )
+
+
 def attach(session, viewer=None):
-    """Spawn vncviewer -Shared against the session's local tunnel port.
-    Returns the Popen handle (caller does not wait)."""
+    """Launch a VNC client against the session's local tunnel port.
+
+    Returns the Popen handle (caller does not wait). On macOS, with no
+    explicit viewer, uses `open vnc://localhost:PORT` (Screen Sharing);
+    otherwise runs `vncviewer -Shared localhost:PORT`.
+    """
+    if viewer is None and sys.platform == "darwin":
+        return _spawn(["open", "vnc://localhost:%d" % session.local_port])
     viewer = viewer or find_viewer()
     if not viewer:
         raise RuntimeError(
             "no VNC viewer found; install TigerVNC (vncviewer) or pass --viewer")
-    return subprocess.Popen(
-        [viewer, "-Shared", "localhost:%d" % session.local_port],
-        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-    )
+    return _spawn([viewer, "-Shared", "localhost:%d" % session.local_port])
