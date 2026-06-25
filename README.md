@@ -43,7 +43,9 @@ small discovery responder sidecar so VNC sessions appear in
 ```
 
 Prerequisites: a Kerberos ticket (`kinit`, or the keytab manager in
-`mu2edaq-controlroom/mu2e-krb-cron.py`) and TigerVNC's `vncviewer`.
+`mu2edaq-controlroom/mu2e-krb-cron.py`) and a VNC client. On macOS the
+built-in Screen Sharing client is used (`open vnc://localhost:PORT`); on
+Linux/Windows install TigerVNC's `vncviewer`.
 
 ## First-time host setup
 

@@ -32,17 +32,17 @@ def test_payload_contains_everything(runner):
 
 
 def test_select_by_session(runner):
-    sessions = runner.select(session="daq-main")
-    assert [s.name for s in sessions] == ["daq-main"]
+    sessions = runner.select(session="dcs-main")
+    assert [s.name for s in sessions] == ["dcs-main"]
 
 
 def test_select_by_host(runner):
     sessions = runner.select(host="mu2e-mgr-01")
-    assert {s.name for s in sessions} == {"shift-main", "shift-aux"}
+    assert {s.name for s in sessions} == {"dcs-main", "shift-main", "trig-main"}
 
 
 def test_select_all(runner):
-    assert len(runner.select(all_sessions=True)) == 6
+    assert len(runner.select(all_sessions=True)) == 3
 
 
 def test_select_requires_target(runner):
