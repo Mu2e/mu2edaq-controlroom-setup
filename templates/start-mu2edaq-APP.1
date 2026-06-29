@@ -1,0 +1,88 @@
+.TH START-MU2EDAQ-APP 1 "2026" "Mu2e DAQ" "Control Room"
+.SH NAME
+start\-mu2edaq\-APP \- start a Mu2e DAQ application under the control room
+.SH SYNOPSIS
+.B start\-mu2edaq\-APP.sh
+.RB [ \-\-port
+.IR NAME = VALUE ]
+.RB [ \-\-config
+.IR FILE ]
+.RB [ \-\-foreground ]
+.RB [ \-h | \-\-help ]
+.SH DESCRIPTION
+Standardized start script for a Mu2e DAQ application. It is normally
+launched by the control room dispatcher
+.BR crs\-app (1)
+as
+.BR "crs\-app start <app\-id>" ,
+which exports
+.B CRS_PORT_<NAME>
+for each port declared under the app in
+.IR apps.yaml .
+The script resolves and re\-exports each port, writes a pid file under
+.IR $CRS_HOME/run ,
+and daemonizes the application, logging to
+.IR $CRS_HOME/log/<app\-id>.log .
+If the application is already running it exits successfully without
+starting a second copy.
+.PP
+This file is a TEMPLATE: copy it into the application repository, rename
+it, and fill in the application identity, its ports, and the launch
+command.
+.SH OPTIONS
+.TP
+.BI \-\-port " NAME=VALUE"
+Override a single port. Repeatable. Highest precedence.
+.TP
+.BI \-\-config " FILE"
+Source
+.I FILE
+(KEY=VALUE shell assignments such as
+.BR CRS_PORT_HTTP=5001 )
+before resolving ports. Also read from
+.BR CRS_APP_CONFIG .
+.TP
+.B \-\-foreground
+Run in the foreground (exec the app) instead of daemonizing; useful
+under a process supervisor or for debugging.
+.TP
+.BR \-h ", " \-\-help
+Print usage and exit.
+.SH "PORT PRECEDENCE"
+Highest wins:
+.BR \-\-port " > " "CRS_PORT_<NAME> environment" " > " "\-\-config file" " > built\-in default."
+.SH ENVIRONMENT
+.TP
+.B CRS_PORT_<NAME>
+Port assignments injected by
+.BR crs\-app (1)
+from
+.IR apps.yaml .
+.TP
+.B CRS_HOME
+Control room home (default
+.IR ~/controlroom ).
+Sets the run and log directories unless
+.B CRS_RUN_DIR
+or
+.B CRS_LOG_DIR
+override them.
+.TP
+.B CRS_APP_CONFIG
+Default config file when
+.B \-\-config
+is not given.
+.SH FILES
+.TP
+.I $CRS_HOME/run/<app\-id>.pid
+Pid file, consumed by
+.BR stop\-mu2edaq\-APP (1).
+.TP
+.I $CRS_HOME/log/<app\-id>.log
+Daemon stdout/stderr.
+.SH "EXIT STATUS"
+0 on success or when already running; non\-zero on failure.
+.SH "SEE ALSO"
+.BR stop\-mu2edaq\-APP (1),
+.BR crs\-app (1),
+.BR crs\-tunnel (1)
