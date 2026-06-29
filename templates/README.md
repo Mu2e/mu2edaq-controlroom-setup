@@ -62,5 +62,6 @@ shellcheck start-mu2edaq-<app>.sh stop-mu2edaq-<app>.sh # optional, if installed
 man ./man/man1/start-mu2edaq-<app>.1                    # renders cleanly
 ```
 
-The corresponding per-repo work is tracked by the `*-startstop-*` drafts
-in [`../doc/issues/`](../doc/issues/).
+The corresponding per-repo work is tracked by the "Standardize start/stop
+scripts" issues filed in each application repository under the
+[Mu2e organization](https://github.com/Mu2e).

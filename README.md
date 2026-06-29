@@ -88,7 +88,7 @@ Command line > environment (`CRS_CONFIG`, `CRS_GATEWAY`,
 - `server/` — scripts installed onto DAQ hosts (no venv needed there)
 - `bin/` — client-side convenience wrappers
 - `man/man1/` — man pages for every tool
-- `doc/issues/` — draft GitHub issues for per-app standardization and discovery adoption
+- `templates/` — start/stop script template for app repos to adopt
 - `tests/` — pytest suite (`venv/bin/pytest`)
 
 ## Tests
