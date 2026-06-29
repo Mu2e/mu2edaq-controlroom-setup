@@ -1,0 +1,59 @@
+.TH STOP-MU2EDAQ-APP 1 "2026" "Mu2e DAQ" "Control Room"
+.SH NAME
+stop\-mu2edaq\-APP \- stop a Mu2e DAQ application under the control room
+.SH SYNOPSIS
+.B stop\-mu2edaq\-APP.sh
+.RB [ \-\-timeout
+.IR SECONDS ]
+.RB [ \-h | \-\-help ]
+.SH DESCRIPTION
+Standardized stop script for a Mu2e DAQ application, the counterpart to
+.BR start\-mu2edaq\-APP (1).
+Normally launched by the control room dispatcher
+.BR crs\-app (1)
+as
+.BR "crs\-app stop <app\-id>" .
+It reads the pid file written at start, sends
+.BR SIGTERM ,
+waits up to the timeout for a graceful exit, then escalates to
+.B SIGKILL
+and removes the pid file. Exiting cleanly when the application is not
+running (missing or stale pid file).
+.PP
+This file is a TEMPLATE: copy it into the application repository and set
+the application identity to match the start script.
+.SH OPTIONS
+.TP
+.BI \-\-timeout " SECONDS"
+Seconds to wait after
+.B SIGTERM
+before sending
+.BR SIGKILL .
+Default 10; also read from
+.BR CRS_STOP_TIMEOUT .
+.TP
+.BR \-h ", " \-\-help
+Print usage and exit.
+.SH ENVIRONMENT
+.TP
+.B CRS_HOME
+Control room home (default
+.IR ~/controlroom );
+locates the pid file under
+.IR $CRS_HOME/run
+unless
+.B CRS_RUN_DIR
+overrides it.
+.TP
+.B CRS_STOP_TIMEOUT
+Default graceful\-exit timeout in seconds.
+.SH FILES
+.TP
+.I $CRS_HOME/run/<app\-id>.pid
+Pid file written by
+.BR start\-mu2edaq\-APP (1).
+.SH "EXIT STATUS"
+0 when stopped or already not running; non\-zero on failure.
+.SH "SEE ALSO"
+.BR start\-mu2edaq\-APP (1),
+.BR crs\-app (1)
