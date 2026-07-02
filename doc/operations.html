@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Daily Operation - Mu2e DAQ Control Room Setup</title>
+  <link rel="stylesheet" href="assets/site.css">
+</head>
+<body>
+  <header class="site-header"><div class="header-inner"><h1 class="site-title">Daily Operation</h1><p class="site-subtitle">Start, connect, inspect, and stop control-room sessions.</p></div></header>
+  <div class="layout">
+    <nav class="sidebar" aria-label="Documentation">
+      <h2>Docs</h2>
+      <a href="index.html">Overview</a>
+      <a href="install.html">Install and Setup</a>
+      <a href="operations.html">Daily Operation</a>
+      <a href="commands.html">Command Reference</a>
+      <a href="apps.html">Application Launchers</a>
+      <a href="troubleshooting.html">Troubleshooting</a>
+    </nav>
+    <main class="content">
+      <h1>Daily Operation</h1>
+
+      <h2 id="start-all">Start All Sessions</h2>
+      <pre><code>bin/start-controlroom.sh</code></pre>
+      <p>This starts all configured remote VNC sessions, then opens all local SSH tunnels. The explicit equivalent is:</p>
+      <pre><code>venv/bin/crs-remote start --all
+venv/bin/crs-tunnel open --all</code></pre>
+
+      <h2 id="connect">Connect To A Session</h2>
+      <pre><code>venv/bin/crs-tunnel connect --session shift-main</code></pre>
+      <p><code>connect</code> opens the tunnel if needed and launches the VNC client. Use <code>--viewer /path/to/vncviewer</code> to force a specific viewer.</p>
+
+      <h2 id="status">Check Status</h2>
+      <pre><code>venv/bin/crs-tunnel status
+venv/bin/crs-remote status --all</code></pre>
+      <p><code>crs-tunnel status</code> reports local tunnel state. <code>crs-remote status --all</code> reports remote VNC and discovery-responder state.</p>
+
+      <h2 id="stop-all">Stop All Sessions</h2>
+      <pre><code>bin/stop-controlroom.sh</code></pre>
+      <p>This closes all local tunnels, then stops all configured remote VNC sessions. The explicit equivalent is:</p>
+      <pre><code>venv/bin/crs-tunnel close --all
+venv/bin/crs-remote stop --all</code></pre>
+
+      <h2 id="target-selection">Target Selection</h2>
+      <p><code>crs-remote</code> and <code>crs-tunnel</code> use the same selectors.</p>
+      <table>
+        <thead><tr><th>Selector</th><th>Meaning</th></tr></thead>
+        <tbody>
+          <tr><td><code>--session NAME</code></td><td>Operate on one configured session.</td></tr>
+          <tr><td><code>--host HOST</code></td><td>Operate on all configured sessions on a host.</td></tr>
+          <tr><td><code>--all</code></td><td>Operate on every configured session.</td></tr>
+        </tbody>
+      </table>
+      <pre><code>venv/bin/crs-remote start --session dcs-main
+venv/bin/crs-tunnel open --host mu2e-mgr-01.fnal.gov
+venv/bin/crs-tunnel close --all</code></pre>
+      <p>For <code>status</code>, omitting a selector defaults to <code>--all</code>.</p>
+
+      <h2 id="gui">GUI</h2>
+      <pre><code>venv/bin/crs-gui</code></pre>
+      <p>The Tunnels tab provides per-session Open, Close, and Connect actions. The Discovery tab scans via the gateway or local multicast. Use gateway mode in production because multicast does not traverse the FNAL gateway.</p>
+    </main>
+  </div>
+</body>
+</html>

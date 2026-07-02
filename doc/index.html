@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Mu2e DAQ Control Room Setup Docs</title>
+  <link rel="stylesheet" href="assets/site.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="header-inner">
+      <h1 class="site-title">Mu2e DAQ Control Room Setup</h1>
+      <p class="site-subtitle">Static usage documentation for linking from DAQ packages.</p>
+    </div>
+  </header>
+  <div class="layout">
+    <nav class="sidebar" aria-label="Documentation">
+      <h2>Docs</h2>
+      <a href="index.html">Overview</a>
+      <a href="install.html">Install and Setup</a>
+      <a href="operations.html">Daily Operation</a>
+      <a href="commands.html">Command Reference</a>
+      <a href="apps.html">Application Launchers</a>
+      <a href="troubleshooting.html">Troubleshooting</a>
+      <a href="usage.md">Markdown Guide</a>
+    </nav>
+    <main class="content">
+      <h1>Control Room Documentation</h1>
+      <p>This site documents the current behavior of <code>mu2edaq-controlroom-setup</code>: VNC session lifecycle, SSH tunnels, desktop launcher provisioning, and the application launcher contract.</p>
+
+      <div class="link-grid">
+        <a class="link-card" href="install.html">
+          <strong>Install and Setup</strong>
+          <span>Bootstrap the client, install host-side scripts, and provision desktop icons.</span>
+        </a>
+        <a class="link-card" href="operations.html">
+          <strong>Daily Operation</strong>
+          <span>Start, connect to, check, and stop the configured control-room sessions.</span>
+        </a>
+        <a class="link-card" href="commands.html">
+          <strong>Command Reference</strong>
+          <span>Arguments and behavior for <code>crs-remote</code>, <code>crs-tunnel</code>, and <code>crs-gui</code>.</span>
+        </a>
+        <a class="link-card" href="apps.html">
+          <strong>Application Launchers</strong>
+          <span>How app packages plug into <code>crs-app</code>, ports, and XFCE desktop launchers.</span>
+        </a>
+        <a class="link-card" href="troubleshooting.html">
+          <strong>Troubleshooting</strong>
+          <span>Kerberos, tunnels, VNC sessions, viewers, desktop icons, and discovery scans.</span>
+        </a>
+      </div>
+
+      <h2 id="current-sessions">Current Configured Sessions</h2>
+      <p>The current <code>config/controlroom.yaml</code> defines three sessions on <code>mu2e-mgr-01.fnal.gov</code>.</p>
+      <table>
+        <thead>
+          <tr>
+            <th>Session</th>
+            <th>Account</th>
+            <th>Display</th>
+            <th>VNC port</th>
+            <th>Local tunnel port</th>
+            <th>Geometry</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td><code>dcs-main</code></td><td><code>mu2edcs</code></td><td><code>:1</code></td><td><code>5901</code></td><td><code>5951</code></td><td><code>1920x1080</code></td></tr>
+          <tr><td><code>shift-main</code></td><td><code>mu2eshift</code></td><td><code>:2</code></td><td><code>5902</code></td><td><code>5952</code></td><td><code>1920x1080</code></td></tr>
+          <tr><td><code>trig-main</code></td><td><code>mu2etrig</code></td><td><code>:3</code></td><td><code>5903</code></td><td><code>5953</code></td><td><code>1920x1080</code></td></tr>
+        </tbody>
+      </table>
+
+      <div class="notice">
+        VNC servers are started with <code>-localhost yes</code>. Connect through <code>crs-tunnel</code>; do not expect direct network access to the VNC ports.
+      </div>
+    </main>
+  </div>
+  <footer class="footer">Generated as static project documentation. Use relative links when referencing these pages from sibling packages.</footer>
+</body>
+</html>

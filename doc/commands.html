@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Command Reference - Mu2e DAQ Control Room Setup</title>
+  <link rel="stylesheet" href="assets/site.css">
+</head>
+<body>
+  <header class="site-header"><div class="header-inner"><h1 class="site-title">Command Reference</h1><p class="site-subtitle">Client commands and installed host-side tools.</p></div></header>
+  <div class="layout">
+    <nav class="sidebar" aria-label="Documentation">
+      <h2>Docs</h2>
+      <a href="index.html">Overview</a>
+      <a href="install.html">Install and Setup</a>
+      <a href="operations.html">Daily Operation</a>
+      <a href="commands.html">Command Reference</a>
+      <a href="apps.html">Application Launchers</a>
+      <a href="troubleshooting.html">Troubleshooting</a>
+    </nav>
+    <main class="content">
+      <h1>Command Reference</h1>
+
+      <h2 id="crs-remote"><code>crs-remote</code></h2>
+      <pre><code>venv/bin/crs-remote start --session NAME
+venv/bin/crs-remote stop --session NAME
+venv/bin/crs-remote status --all
+venv/bin/crs-remote install --all
+venv/bin/crs-remote provision --all</code></pre>
+      <p><code>crs-remote</code> runs commands over SSH with GSSAPI authentication and ProxyJump through the configured gateway. VNC lifecycle commands run as the shared session accounts.</p>
+      <p>Remote lifecycle commands call these installed scripts:</p>
+      <ul>
+        <li><code>start-vnc-session.sh &lt;session&gt; &lt;display&gt; -g &lt;geometry&gt; -d &lt;depth&gt;</code></li>
+        <li><code>stop-vnc-session.sh &lt;session&gt; &lt;display&gt;</code></li>
+        <li><code>status-vnc-session.sh &lt;session&gt; &lt;display&gt;</code></li>
+        <li><code>crs-provision-desktop --session &lt;session&gt;</code></li>
+      </ul>
+      <p><code>install --all</code> runs once per unique <code>(host, account)</code> pair.</p>
+
+      <h2 id="crs-tunnel"><code>crs-tunnel</code></h2>
+      <pre><code>venv/bin/crs-tunnel open --session NAME
+venv/bin/crs-tunnel close --session NAME
+venv/bin/crs-tunnel status
+venv/bin/crs-tunnel connect --session NAME</code></pre>
+      <p>Each tunnel is a background SSH master connection with a control socket in <code>~/.crs</code>. It forwards:</p>
+      <pre><code>localhost:&lt;local_port&gt; -&gt; localhost:&lt;5900 + display&gt; on the DAQ host</code></pre>
+      <p>Tunnels log in as <code>personal_user</code> from <code>controlroom.yaml</code> when set. If no personal user is configured, they fall back to the session account.</p>
+
+      <h2 id="crs-gui"><code>crs-gui</code></h2>
+      <pre><code>venv/bin/crs-gui</code></pre>
+      <p>The GUI provides tunnel actions and discovery scanning. Double-clicking a discovered <code>vnc</code> row maps it to a configured session, opens the tunnel, and launches a viewer.</p>
+
+      <h2 id="server-tools">Installed Server Tools</h2>
+      <table>
+        <thead><tr><th>Tool</th><th>Purpose</th></tr></thead>
+        <tbody>
+          <tr><td><code>start-vnc-session.sh</code></td><td>Starts one VNC display and its discovery responder.</td></tr>
+          <tr><td><code>stop-vnc-session.sh</code></td><td>Stops the discovery responder and VNC display.</td></tr>
+          <tr><td><code>status-vnc-session.sh</code></td><td>Prints <code>name|display|port|state|responder</code>.</td></tr>
+          <tr><td><code>vnc-discovery-responder.py</code></td><td>Answers discovery queries for a VNC session.</td></tr>
+          <tr><td><code>crs-app</code></td><td>Dispatches app start/stop scripts with configured port environment variables.</td></tr>
+          <tr><td><code>crs-provision-desktop</code></td><td>Writes XFCE <code>.desktop</code> launchers.</td></tr>
+        </tbody>
+      </table>
+
+      <h2 id="configuration">Configuration Overrides</h2>
+      <p>Precedence is command line, then environment, then YAML config, then built-in defaults.</p>
+      <table>
+        <thead><tr><th>Variable</th><th>Purpose</th></tr></thead>
+        <tbody>
+          <tr><td><code>CRS_CONFIG</code></td><td>Alternate <code>controlroom.yaml</code>.</td></tr>
+          <tr><td><code>CRS_APPS_CONFIG</code></td><td>Alternate <code>apps.yaml</code>.</td></tr>
+          <tr><td><code>CRS_GATEWAY</code></td><td>Override the SSH ProxyJump host.</td></tr>
+          <tr><td><code>CRS_INSTALL_DIR</code></td><td>Override the remote install directory.</td></tr>
+          <tr><td><code>CRS_GEOMETRY</code></td><td>Default geometry for direct server-side VNC starts.</td></tr>
+          <tr><td><code>CRS_DEPTH</code></td><td>Default VNC color depth for direct server-side VNC starts.</td></tr>
+          <tr><td><code>CRS_ANNOUNCE_INTERVAL</code></td><td>Discovery responder announcement interval.</td></tr>
+        </tbody>
+      </table>
+    </main>
+  </div>
+</body>
+</html>

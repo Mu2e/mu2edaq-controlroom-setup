@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Install and Setup - Mu2e DAQ Control Room Setup</title>
+  <link rel="stylesheet" href="assets/site.css">
+</head>
+<body>
+  <header class="site-header"><div class="header-inner"><h1 class="site-title">Install and Setup</h1><p class="site-subtitle">Client bootstrap and first-time DAQ host provisioning.</p></div></header>
+  <div class="layout">
+    <nav class="sidebar" aria-label="Documentation">
+      <h2>Docs</h2>
+      <a href="index.html">Overview</a>
+      <a href="install.html">Install and Setup</a>
+      <a href="operations.html">Daily Operation</a>
+      <a href="commands.html">Command Reference</a>
+      <a href="apps.html">Application Launchers</a>
+      <a href="troubleshooting.html">Troubleshooting</a>
+    </nav>
+    <main class="content">
+      <h1>Install and Setup</h1>
+
+      <h2 id="prerequisites">Prerequisites</h2>
+      <p>On the client machine, use Python 3.9 or newer, Kerberos credentials for the FNAL gateway and DAQ hosts, SSH access through <code>mu2egateway01.fnal.gov</code>, and a VNC client.</p>
+      <p>On macOS, <code>crs-tunnel connect</code> uses <code>open vnc://localhost:PORT</code> by default. On Linux or Windows, install TigerVNC or provide another <code>vncviewer</code>.</p>
+      <p>On DAQ hosts, the session accounts need <code>vncserver</code>, <code>startxfce4</code>, Python 3, and application checkouts matching the <code>install_path</code> values in <code>config/apps.yaml</code> if desktop launchers should start apps.</p>
+
+      <h2 id="client-bootstrap">Client Bootstrap</h2>
+      <pre><code>./bootstrap.sh</code></pre>
+      <p>The bootstrap script creates <code>venv/</code>, installs the package in editable mode with GUI and test extras, and installs sibling <code>../mu2edaq-discovery</code> if that checkout exists.</p>
+
+      <h2 id="remote-install">Install Host-Side Scripts</h2>
+      <p>Get a Kerberos ticket, then install the server payload to all configured session accounts.</p>
+      <pre><code>kinit
+venv/bin/crs-remote install --all</code></pre>
+      <p>The install command copies the files from <code>server/</code> plus <code>config/controlroom.yaml</code> and <code>config/apps.yaml</code>. On the remote account it creates:</p>
+      <pre><code>~/controlroom/bin
+~/controlroom/etc
+~/controlroom/log
+~/.crs</code></pre>
+      <p>It also adds <code>~/controlroom/bin</code> to <code>~/.bash_profile</code> and symlinks app start/stop scripts into <code>~/controlroom/bin</code> when the app checkout exists.</p>
+
+      <h2 id="desktop-provisioning">Provision Desktop Launchers</h2>
+      <pre><code>venv/bin/crs-remote provision --all</code></pre>
+      <p>This runs <code>~/controlroom/bin/crs-provision-desktop --session &lt;name&gt;</code> for each configured session. The generated XFCE launchers call <code>crs-app start &lt;app-id&gt;</code> and <code>crs-app stop &lt;app-id&gt;</code>.</p>
+
+      <h2 id="verify">Verify</h2>
+      <pre><code>venv/bin/crs-remote status --all
+venv/bin/crs-tunnel status</code></pre>
+      <p>Remote status checks the VNC displays. Tunnel status checks the local SSH master control sockets.</p>
+    </main>
+  </div>
+</body>
+</html>

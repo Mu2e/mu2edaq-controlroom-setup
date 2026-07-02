@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Application Launchers - Mu2e DAQ Control Room Setup</title>
+  <link rel="stylesheet" href="assets/site.css">
+</head>
+<body>
+  <header class="site-header"><div class="header-inner"><h1 class="site-title">Application Launchers</h1><p class="site-subtitle">The contract other DAQ packages should link to and implement.</p></div></header>
+  <div class="layout">
+    <nav class="sidebar" aria-label="Documentation">
+      <h2>Docs</h2>
+      <a href="index.html">Overview</a>
+      <a href="install.html">Install and Setup</a>
+      <a href="operations.html">Daily Operation</a>
+      <a href="commands.html">Command Reference</a>
+      <a href="apps.html">Application Launchers</a>
+      <a href="troubleshooting.html">Troubleshooting</a>
+    </nav>
+    <main class="content">
+      <h1>Application Launcher Contract</h1>
+      <p>Application packages integrate with the control-room desktops through <code>config/apps.yaml</code>, standardized start/stop scripts, and the installed <code>crs-app</code> dispatcher.</p>
+
+      <h2 id="apps-yaml"><code>config/apps.yaml</code></h2>
+      <p>Each app entry defines the app id, script names, expected checkout path, port assignments, desktop sessions, and icon behavior.</p>
+      <table>
+        <thead><tr><th>Field</th><th>Meaning</th></tr></thead>
+        <tbody>
+          <tr><td><code>id</code></td><td>Short identifier used by <code>crs-app start &lt;id&gt;</code>.</td></tr>
+          <tr><td><code>title</code></td><td>Human-readable launcher label.</td></tr>
+          <tr><td><code>repo</code></td><td>Repository under <code>mu2edaq-main</code>.</td></tr>
+          <tr><td><code>start</code>, <code>stop</code></td><td>Standardized script names.</td></tr>
+          <tr><td><code>install_path</code></td><td>Expected app checkout path on DAQ hosts.</td></tr>
+          <tr><td><code>ports</code></td><td>Named port assignments exported by <code>crs-app</code>.</td></tr>
+          <tr><td><code>sessions</code></td><td>VNC sessions that receive desktop launchers for this app.</td></tr>
+          <tr><td><code>desktop</code></td><td>Icon name and whether to run in a terminal.</td></tr>
+        </tbody>
+      </table>
+
+      <h2 id="crs-app"><code>crs-app</code></h2>
+      <p>Desktop launchers call:</p>
+      <pre><code>~/controlroom/bin/crs-app start &lt;app-id&gt;
+~/controlroom/bin/crs-app stop &lt;app-id&gt;</code></pre>
+      <p><code>crs-app</code> reads <code>~/controlroom/etc/apps.yaml</code>, exports configured ports, finds the start or stop script in <code>~/controlroom/bin</code> or the app <code>install_path</code>, then executes it.</p>
+
+      <h2 id="port-environment">Port Environment</h2>
+      <p>Each named port becomes an environment variable:</p>
+      <pre><code>ports: {http: 8080, zmq: 5555}
+
+CRS_PORT_HTTP=8080
+CRS_PORT_ZMQ=5555</code></pre>
+      <p>Application scripts should read these variables and should keep the standard precedence: command line, then environment, then config, then built-in defaults.</p>
+
+      <h2 id="standard-script-names">Standard Script Names</h2>
+      <p>Use names matching the entries in <code>apps.yaml</code>, for example:</p>
+      <pre><code>start-mu2edaq-dashboard.sh
+stop-mu2edaq-dashboard.sh</code></pre>
+      <p>The <code>templates/</code> directory in this repository contains adoption templates for application packages, including man page templates.</p>
+
+      <h2 id="active-sessions">Active Session Names</h2>
+      <p>The current active sessions are <code>dcs-main</code>, <code>shift-main</code>, and <code>trig-main</code>. Apps assigned only to older names such as <code>daq-main</code>, <code>daq-aux</code>, <code>daq-dl2</code>, or <code>shift-aux</code> remain in the inventory but will not receive desktop launchers unless those sessions are present in <code>config/controlroom.yaml</code>.</p>
+
+      <h2 id="host-check">Inspect Apps On A Host</h2>
+      <pre><code>~/controlroom/bin/crs-app list</code></pre>
+      <p>Run this on a configured DAQ account to see the installed app inventory and port assignments.</p>
+    </main>
+  </div>
+</body>
+</html>

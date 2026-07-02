@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Troubleshooting - Mu2e DAQ Control Room Setup</title>
+  <link rel="stylesheet" href="assets/site.css">
+</head>
+<body>
+  <header class="site-header"><div class="header-inner"><h1 class="site-title">Troubleshooting</h1><p class="site-subtitle">Common checks for Kerberos, tunnels, VNC sessions, viewers, launchers, and discovery.</p></div></header>
+  <div class="layout">
+    <nav class="sidebar" aria-label="Documentation">
+      <h2>Docs</h2>
+      <a href="index.html">Overview</a>
+      <a href="install.html">Install and Setup</a>
+      <a href="operations.html">Daily Operation</a>
+      <a href="commands.html">Command Reference</a>
+      <a href="apps.html">Application Launchers</a>
+      <a href="troubleshooting.html">Troubleshooting</a>
+    </nav>
+    <main class="content">
+      <h1>Troubleshooting</h1>
+
+      <h2 id="kerberos">No Kerberos Ticket</h2>
+      <pre><code>klist -s || kinit</code></pre>
+      <p>Both remote lifecycle commands and tunnel opens perform a Kerberos preflight. Renew credentials before retrying.</p>
+
+      <h2 id="tunnel-closed">Tunnel Reports Closed</h2>
+      <pre><code>venv/bin/crs-tunnel status
+venv/bin/crs-tunnel open --session shift-main</code></pre>
+      <p>The tunnel manager checks SSH control sockets under <code>~/.crs</code>. If <code>ssh -O check</code> fails, it removes stale sockets so the next open can recreate the tunnel.</p>
+
+      <h2 id="vnc-missing">VNC Session Is Not Visible</h2>
+      <pre><code>venv/bin/crs-remote status --session shift-main
+venv/bin/crs-remote start --session shift-main</code></pre>
+      <p>Remote status reports both VNC display state and discovery responder state. Start the session if the display is stopped.</p>
+
+      <h2 id="viewer">Viewer Does Not Launch</h2>
+      <pre><code>venv/bin/crs-tunnel connect --session shift-main --viewer /path/to/vncviewer</code></pre>
+      <p>On macOS, the default viewer path uses <code>open vnc://localhost:PORT</code>. On other systems, install TigerVNC or pass a viewer explicitly.</p>
+
+      <h2 id="desktop-icons">Desktop Icons Are Missing</h2>
+      <pre><code>venv/bin/crs-remote provision --session shift-main</code></pre>
+      <p>If icons are still missing for an app, confirm the app's <code>sessions</code> entry in <code>config/apps.yaml</code> includes an active session from <code>config/controlroom.yaml</code>. Also confirm its start/stop scripts exist under the configured <code>install_path</code>.</p>
+
+      <h2 id="discovery">Discovery Scan Fails In The GUI</h2>
+      <ul>
+        <li>Confirm the selected remote target is reachable with Kerberos SSH.</li>
+        <li>Confirm <code>mu2edaq-discover --json</code> is available on the remote target, either in <code>~/controlroom/bin</code> or on <code>PATH</code>.</li>
+        <li>Use gateway mode for production scans. Local multicast is only useful on a network segment where multicast discovery traffic is visible.</li>
+      </ul>
+
+      <h2 id="tests">Run Tests</h2>
+      <pre><code>venv/bin/pytest</code></pre>
+      <p>The tests cover configuration validation, tunnel command construction, viewer launch behavior, remote install payloads, and desktop launcher generation.</p>
+    </main>
+  </div>
+</body>
+</html>
