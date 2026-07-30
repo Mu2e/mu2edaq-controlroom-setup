@@ -52,7 +52,10 @@ def test_ssh_config_flag():
 
 
 def test_control_socket_path_uses_short_host(tmp_path, monkeypatch):
+    # expanduser("~") reads $HOME on POSIX but %USERPROFILE% on Windows; set
+    # both so the test pins the home dir on either platform.
     monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.setenv("USERPROFILE", str(tmp_path))
     path = sshutil.control_socket_path("mu2e-dl-01.fnal.gov", 5953)
     assert path.endswith("ssh-ctrl-mu2e-dl-01-5953")
     assert os.path.isdir(os.path.join(str(tmp_path), ".crs"))

@@ -97,6 +97,8 @@ def test_crs_app_unknown_id(crs_home):
     assert "unknown app" in result.stderr
 
 
+@pytest.mark.skipif(os.name != "posix",
+                    reason="crs-app execs a bash .sh start script (POSIX only)")
 def test_crs_app_exports_ports_and_execs(crs_home, tmp_path):
     """crs-app must export CRS_PORT_* and exec the start script."""
     fake = crs_home / "bin" / "start-mu2edaq-dashboard.sh"

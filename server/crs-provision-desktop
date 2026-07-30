@@ -81,8 +81,14 @@ def provision(sessions, apps, desktop_dir):
                 fh.write(render_desktop_file(app, action, terminal=terminal))
             os.chmod(path, os.stat(path).st_mode | stat.S_IXUSR | stat.S_IXGRP)
             # Mark trusted so XFCE doesn't show the "untrusted launcher" overlay.
-            subprocess.run(["gio", "set", path, "metadata::trusted", "true"],
-                           capture_output=True)
+            # Best-effort: gio is a GNOME tool absent on minimal hosts (and on
+            # Windows), and this is only a cosmetic trust flag -- a missing gio
+            # must not abort provisioning of the launchers themselves.
+            try:
+                subprocess.run(["gio", "set", path, "metadata::trusted", "true"],
+                               capture_output=True)
+            except (FileNotFoundError, OSError):
+                pass
             written.append(path)
     return written
 
