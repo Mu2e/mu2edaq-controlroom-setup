@@ -1,0 +1,189 @@
+schema: mega-review/1
+package: mu2edaq-controlroom-setup
+tier: A
+group: control-room
+repo:
+  url: git@github.com:Mu2e/mu2edaq-controlroom-setup.git
+  exists: true
+  issues_enabled: true
+doc_dir: doc
+summary: >
+  Provisions and drives the Mu2e control-room VNC desktops from outside
+  the DAQ network: ssh/Kerberos tunnels through the FNAL gateway, remote
+  VNC lifecycle and host install, XFCE launchers that start each DAQ app
+  with its inventory ports, and a discovery sidecar per session
+languages: [python, bash]
+loc: 1968
+
+runtime:
+  executables:
+    - name: crs-tunnel
+      kind: cli
+      man_page: man/man1/crs-tunnel.1
+    - name: crs-remote
+      kind: cli
+      man_page: man/man1/crs-remote.1
+    - name: crs-gui
+      kind: gui
+      man_page: man/man1/crs-gui.1
+    - name: crs-app
+      kind: cli
+      man_page: man/man1/crs-app.1
+    - name: crs-provision-desktop
+      kind: cli
+      man_page: man/man1/crs-provision-desktop.1
+    - name: install-controlroom.sh
+      kind: script
+      man_page: man/man1/install-controlroom.sh.1
+    - name: start-vnc-session.sh
+      kind: script
+      man_page: man/man1/start-vnc-session.sh.1
+    - name: stop-vnc-session.sh
+      kind: script
+      man_page: man/man1/stop-vnc-session.sh.1
+    - name: status-vnc-session.sh
+      kind: script
+      man_page: man/man1/status-vnc-session.sh.1
+    - name: vnc-discovery-responder.py
+      kind: daemon
+      man_page: man/man1/vnc-discovery-responder.py.1
+    - name: start-controlroom.sh
+      kind: script
+      man_page: man/man1/start-controlroom.sh.1
+    - name: stop-controlroom.sh
+      kind: script
+      man_page: man/man1/stop-controlroom.sh.1
+    - name: bootstrap.sh
+      kind: script
+      waiver: >
+        one-shot client venv creation, no options; behaviour stated in
+        README.md and doc/usage.md
+    - name: xstartup
+      kind: script
+      waiver: >
+        X session script run by vncserver, not by a user; contents
+        described in start-vnc-session.sh(1) and doc/INTERFACES.md section 4
+    - name: templates/start-mu2edaq-APP.sh
+      kind: script
+      waiver: >
+        template copied into app repositories, never run from here; ships
+        its own man-page templates (templates/start-mu2edaq-APP.1,
+        templates/stop-mu2edaq-APP.1); contract in doc/INTERFACES.md section 6
+  services: []                 # nothing is a systemd unit; sessions are started by crs-remote
+  ports:
+    - {port: 5951, proto: tcp, role: vnc-tunnel-listener-client-loopback, source: "config/controlroom.yaml:27"}
+    - {port: 5952, proto: tcp, role: vnc-tunnel-listener-client-loopback, source: "config/controlroom.yaml:34"}
+    - {port: 5953, proto: tcp, role: vnc-tunnel-listener-client-loopback, source: "config/controlroom.yaml:41"}
+    - {port: 5901, proto: tcp, role: vnc-host-loopback, source: "config/controlroom.yaml:24"}
+    - {port: 5902, proto: tcp, role: vnc-host-loopback, source: "config/controlroom.yaml:31"}
+    - {port: 5903, proto: tcp, role: vnc-host-loopback, source: "config/controlroom.yaml:38"}
+    - {port: 28999, proto: udp, role: discovery-responder, source: "server/vnc-discovery-responder.py:36"}
+  config_files: [config/controlroom.yaml, config/apps.yaml]
+  env_vars:
+    - CRS_CONFIG
+    - CRS_APPS_CONFIG
+    - CRS_GATEWAY
+    - CRS_INSTALL_DIR          # parsed, never used (CRS-006)
+    - CRS_HOME
+    - CRS_GEOMETRY
+    - CRS_DEPTH
+    - CRS_ANNOUNCE_INTERVAL
+    - CRS_PORT_<NAME>          # exported to app start scripts by crs-app, never read here
+
+interactions:
+  depends_on:
+    - {package: mu2edaq-discovery, via: import, direction: out, evidence: "src/mu2edaq_controlroom_setup/gui/discovery_tab.py:40"}
+    - {package: mu2edaq-discovery, via: import, direction: out, evidence: "server/vnc-discovery-responder.py:24"}
+    - {package: mu2edaq-discovery, via: ssh, direction: out, evidence: "src/mu2edaq_controlroom_setup/gui/discovery_tab.py:51"}
+    - {package: mu2edaq-controlcenter, via: subprocess, direction: out, evidence: "config/apps.yaml:20"}
+    - {package: mu2edaq-dashboard, via: subprocess, direction: out, evidence: "config/apps.yaml:30"}
+    - {package: mu2edaq-bigredbox, via: subprocess, direction: out, evidence: "config/apps.yaml:40"}
+    - {package: mu2edaq-downtime-logger, via: subprocess, direction: out, evidence: "config/apps.yaml:50"}
+    - {package: mu2edaq-diskwatcher, via: subprocess, direction: out, evidence: "config/apps.yaml:60"}
+    - {package: mu2edaq-fts, via: subprocess, direction: out, evidence: "config/apps.yaml:70"}
+    - {package: mu2edaq-heartbeatmonitor, via: subprocess, direction: out, evidence: "config/apps.yaml:80"}
+    - {package: mu2edaq-resource-manager, via: subprocess, direction: out, evidence: "config/apps.yaml:90"}
+    - {package: mu2edaq-runlog-db, via: subprocess, direction: out, evidence: "config/apps.yaml:100"}
+    - {package: mu2edaq-trigger-scalers, via: subprocess, direction: out, evidence: "config/apps.yaml:110"}
+    - {package: mu2edaq-dataformat-viewer, via: subprocess, direction: out, evidence: "config/apps.yaml:120"}
+    - {package: mu2edaq-CFOControl, via: subprocess, direction: out, evidence: "config/apps.yaml:130"}
+  depended_on_by: []
+  external: [openssh, kerberos, tigervnc, xfce, gio, vncviewer, macos-screen-sharing, pyqt6]
+
+quality:
+  tests: {present: true, framework: pytest, count: 43}
+  ci: {present: false, workflows: []}
+  license: MIT                 # LICENSE; pyproject.toml says BSD-3-Clause (CRS-011)
+  artifacts_clean: true
+
+findings:
+  - {id: CRS-001, severity: S2, type: bug, title: "[launch] crs-app execs the ~/controlroom/bin symlink, so every adopted start script resolves SCRIPT_DIR to the bin area and fails", issue: pending, fingerprint: "6b03e34b"}
+  - {id: CRS-002, severity: S3, type: bug, title: "[config] session topology disagrees between controlroom.yaml, README/runbooks and apps.yaml; 8 of 12 apps get no launcher", issue: pending, fingerprint: "f6599080"}
+  - {id: CRS-003, severity: S3, type: bug, title: "[ssh] crs-remote and the GUI gateway scan log in as shared accounts that refuse the operator's principal", issue: pending, fingerprint: "1ceb25cd"}
+  - {id: CRS-004, severity: S3, type: bug, title: "[discovery] VNC sidecar runs under system python3 with nothing installing mu2edaq-discovery; the embedded fallback dies on a malformed DISCOVER", issue: pending, fingerprint: "27f73a63"}
+  - {id: CRS-005, severity: S4, type: bug, title: "[template] start template sources --config after the environment, inverting its documented port precedence", issue: pending, fingerprint: "5eae41a4"}
+  - {id: CRS-006, severity: S3, type: bug, title: "[config] install_dir, CRS_INSTALL_DIR, vnc_password_file, accounts and discovery.announce_interval are parsed and never used", issue: pending, fingerprint: "8acd9bdd"}
+  - {id: CRS-007, severity: S3, type: enhancement, title: "[ssh] credentials are delegated into shared accounts and the local forward is not pinned to loopback", issue: pending, fingerprint: "fb7108a1"}
+  - {id: CRS-008, severity: S3, type: documentation, title: "[docs] the no-ticket hint sends operators to mu2e-krb-cron.py, which destroys a personal ticket", issue: pending, fingerprint: "f73dfcd7"}
+  - {id: CRS-009, severity: S3, type: enhancement, title: "[ci] no CI workflow for a 43-test suite", issue: pending, fingerprint: "c5bcbf9b"}
+  - {id: CRS-010, severity: S4, type: bug, title: "[gui] Discovery-tab double-click opens the ssh tunnel on the UI thread", issue: pending, fingerprint: "638fc580"}
+  - {id: CRS-011, severity: S4, type: bug, title: "[packaging] pyproject.toml declares BSD-3-Clause while LICENSE is MIT", issue: pending, fingerprint: "23ae1ad1"}
+  - {id: CRS-012, severity: S4, type: documentation, title: "[docs] doc/issues/README.md calls the 22 filed and closed tickets drafts; README test count is stale", issue: pending, fingerprint: "19e3ea39"}
+  - {id: CRS-013, severity: S4, type: documentation, title: "[man] man pages were misnamed, unversioned and missing for six executables", issue: pending, fingerprint: "3433011d"}
+  - {id: CRS-014, severity: S4, type: bug, title: "[host] the PyYAML-free fallback parser breaks --all-local and writes Terminal=true on every launcher", issue: pending, fingerprint: "a3ca8c30"}
+
+notes:
+  dedup: >
+    gh issue list -R Mu2e/mu2edaq-controlroom-setup --state all: one issue,
+    #4 (open, requirements.txt vs pyproject.toml PyQt6). No fingerprint, no
+    title-token overlap with any finding; not re-filed.
+  issue_filing: >
+    GitHub writes not permitted (CONTRACT 9.1); all findings staged in
+    doc/ISSUES-PENDING.md with fingerprints
+    sha1("Mu2e/mu2edaq-controlroom-setup:<path>:<rule_id>")[:8].
+  topology: >
+    The shipped config/controlroom.yaml defines three sessions, all on
+    mu2e-mgr-01 (dcs-main :1/5951 mu2edcs, shift-main :2/5952 mu2eshift,
+    trig-main :3/5953 mu2etrig), since commit da08771 (2026-06-25). The
+    six-session layout (shift-main/shift-aux on mgr-01, daq-main/daq-aux on
+    dl-01, daq-dl2 on dl-02, dcs-main on dcs-01, local ports 5951-5956) is
+    the superseded design still in README.md:23-32 and the superproject
+    runbooks. Which one the hosts run was not verified live; staged as
+    CRS-002 per CONTRACT 0.4. The port list above follows the shipped
+    config.
+  security_boundary: >
+    VNC loopback-only binding is enforced only by `-localhost yes` at
+    server/start-vnc-session.sh:51, i.e. only for sessions this script
+    starts. Client listener is loopback by ssh default (no bind address,
+    sshutil.py:59). Every ssh goes through -J gateway (sshutil.py:41-42).
+  system_python_sidecar: >
+    server/start-vnc-session.sh:58 runs vnc-discovery-responder.py under the
+    bare system python3. Nothing in this package installs mu2edaq-discovery
+    there; the embedded fallback runs on a stock host and diverges from the
+    reference (CRS-004). The sidecar's meta values are all strings
+    (server/vnc-discovery-responder.py:149-151), as CONTRACT 9.5 requires.
+  discovery_doc_contradiction: >
+    mu2edaq-discovery/doc/INTERFACES.md section 1.4 says no package enables
+    unsolicited ANNOUNCE. This package's sidecar does, every 30 s by default
+    (server/start-vnc-session.sh:15, :63). Flagged for the discovery doc owner.
+  launcher_comparison: >
+    crs-app and mu2edaq-desktop's mu2edaq-app share the apps.yaml schema and
+    the CRS_PORT_<NAME> export but have drifted in script resolution,
+    execution model, commands and defaults; each has a defect the other
+    lacks (CRS-001 here, DESK-002 there). The apps.yaml divergence table is
+    mu2edaq-desktop/docs/INTERFACES.md section 1.5; its "nine of twelve"
+    orphaned-app count is eight (bigredbox also lists shift-main).
+  integration_tickets: >
+    doc/issues/ holds 22 tickets (11 start/stop, 11 discovery), not 12. All
+    22 were filed and are closed (exact-title match, 2026-10-06); issue
+    numbers in doc/ARCHITECTURE.md.
+  legacy_reference: >
+    sshutil.py:22 and README.md:46 still name mu2edaq-controlroom's
+    mu2e-krb-cron.py as the Kerberos remedy (CRS-008). Not a runtime
+    dependency, so not in depends_on.
+  man_layout: >
+    Already man/man1/. install-controlroom.1 and start-vnc-session.1 renamed
+    to the .sh.1 command names; grep for the old names in README.md, doc/,
+    tests/ and pyproject.toml found no references.
+  version: >
+    pyproject.toml and __init__.py say 1.0.0; man pages use 1.0.0.
