@@ -1,0 +1,36 @@
+.TH STOP-VNC-SESSION.SH 1 "2026-10-06" "mu2edaq-controlroom-setup 1.0.0" "Mu2e DAQ Manual"
+.SH NAME
+stop\-vnc\-session.sh \- stop a control\-room VNC session and its discovery sidecar
+.SH SYNOPSIS
+.B stop\-vnc\-session.sh
+.I session\-name display
+.SH DESCRIPTION
+Runs on the session host as the session account.
+Sends SIGTERM to the pid in
+.IR ~/.crs/vnc\-responder\-: display .pid
+and removes the file, so the session leaves discovery first, then runs
+.B "vncserver \-kill"
+.BI : display
+if
+.B "vncserver \-list"
+shows it, else prints
+.BR SKIP .
+.I session\-name
+is used only in messages.
+.SH OPTIONS
+None.
+.SH FILES
+.I ~/.crs/vnc\-responder\-:N.pid
+.SH EXIT STATUS
+0; 1 on a usage error or non\-numeric display; otherwise
+.BR vncserver 's
+status.
+.SH EXAMPLES
+.EX
+stop\-vnc\-session.sh shift\-main 2
+.EE
+.SH SEE ALSO
+.BR start\-vnc\-session.sh (1),
+.BR crs\-remote (1)
+.SH AUTHOR
+Mu2e DAQ group.

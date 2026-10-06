@@ -1,52 +1,72 @@
-.TH CRS\-GUI 1 "2026-06-12" "Mu2e DAQ" "Mu2e DAQ Manual"
+.TH CRS-GUI 1 "2026-10-06" "mu2edaq-controlroom-setup 1.0.0" "Mu2e DAQ Manual"
 .SH NAME
-crs\-gui \- Mu2e control room manager (tunnels and service discovery)
+crs\-gui \- Mu2e control\-room manager window: tunnels and service discovery
 .SH SYNOPSIS
 .B crs\-gui
 .RB [ \-\-config
 .IR FILE ]
 .SH DESCRIPTION
-A PyQt6 application with two tabs.
-.SS Tunnels tab
-One row per configured VNC session showing tunnel state (probed via the
-ssh control socket every 15 seconds) with
-.BR Open ,
-.BR Close ,
-and
-.B Connect
-buttons.
-Connect opens the tunnel when needed and launches
-.B vncviewer \-Shared
-on the session's local port.
-All ssh operations run in worker threads; the UI never blocks.
-.SS Discovery tab
-Sends a mu2edaq\-discovery DISCOVER query and lists every responding
-service: name, application type, host, port, start time, PID, and
-instance id.
-Two scan modes:
+PyQt6 window with two tabs.
+.SS Tunnels
+One row per configured session with host, account, display, local port
+and tunnel state, and Open, Close and Connect buttons, plus Open all,
+Close all and Refresh.
+State is re\-probed every 15 s.
+Each action runs in a
+.B QThread
+and reports back by signal; the operations are those of
+.BR crs\-tunnel (1).
+.SS Discovery
+Lists responders to a mu2edaq\-discovery DISCOVER: name, app, host,
+port, started, pid, id.
 .TP
-.B Via gateway (production)
-Runs
-.B mu2edaq\-discover \-\-json
-on a selected cluster node over ssh and parses the result.
-This is the default, since multicast does not traverse the FNAL
-gateway.
+.B Via gateway
+(default) runs
+.B "~/controlroom/bin/mu2edaq\-discover \-\-json || mu2edaq\-discover \-\-json"
+over ssh on the selected
+.IB account @ host
+and parses its JSON.
+Nothing in this package installs
+.B mu2edaq\-discover
+on the hosts; it must already be on the non\-interactive PATH there.
 .TP
 .B Local multicast
-Queries the local network segment directly (useful on-site or for
-development).
+calls
+.B mu2edaq_discovery.discover()
+in this process with the configured group, port and timeout; requires
+the package in the venv
+.RB ( bootstrap.sh
+installs the sibling checkout).
 .PP
-Double-clicking a VNC row opens the matching session tunnel and
-attaches the viewer.
+Double\-clicking a row whose app is
+.B vnc
+maps its host and port to a configured session, opens the tunnel and
+starts the viewer.
+That tunnel open runs on the UI thread, so the window freezes for the
+duration of the ssh authentication.
 .SH OPTIONS
 .TP
 .BI \-\-config " FILE"
-Path to controlroom.yaml.
+.IR controlroom.yaml ;
+see
+.BR crs\-tunnel (1).
+.SH FILES
+.I ~/.crs/ssh\-ctrl\-*
+.SH ENVIRONMENT
+.BR CRS_CONFIG ,
+.BR CRS_GATEWAY .
+.SH EXIT STATUS
+The Qt event loop's code, normally 0; 1 after a configuration error
+dialog.
+.SH EXAMPLES
+.EX
+venv/bin/crs\-gui
+venv/bin/crs\-gui \-\-config ~/my\-controlroom.yaml
+.EE
 .SH SEE ALSO
 .BR crs\-tunnel (1),
 .BR crs\-remote (1),
+.BR vnc\-discovery\-responder.py (1),
 .BR mu2edaq\-discover (1)
-.SH REPOSITORY
-.UR https://github.com/Mu2e/mu2edaq-controlroom-setup
-https://github.com/Mu2e/mu2edaq-controlroom-setup
-.UE
+.SH AUTHOR
+Mu2e DAQ group.

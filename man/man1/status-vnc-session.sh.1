@@ -1,0 +1,46 @@
+.TH STATUS-VNC-SESSION.SH 1 "2026-10-06" "mu2edaq-controlroom-setup 1.0.0" "Mu2e DAQ Manual"
+.SH NAME
+status\-vnc\-session.sh \- report control\-room VNC session state in a parseable form
+.SH SYNOPSIS
+.B status\-vnc\-session.sh
+.I name display
+.RI [ "name display" ]...
+.SH DESCRIPTION
+For each pair prints one line
+.PP
+.EX
+NAME|:DISPLAY|PORT|STATE|RESPONDER
+.EE
+.PP
+with
+.I PORT
+= 5900 +
+.IR display ,
+.I STATE
+.B running
+or
+.B stopped
+from
+.BR "vncserver \-list" ,
+and
+.I RESPONDER
+.BR alive ,
+.B dead
+(pid file present, process gone) or
+.B none
+(no pid file).
+.SH OPTIONS
+None.
+.SH FILES
+.I ~/.crs/vnc\-responder\-:N.pid
+.SH EXIT STATUS
+0; 1 when the argument count is zero or odd.
+.SH EXAMPLES
+.EX
+status\-vnc\-session.sh dcs\-main 1 shift\-main 2 trig\-main 3
+.EE
+.SH SEE ALSO
+.BR start\-vnc\-session.sh (1),
+.BR crs\-remote (1)
+.SH AUTHOR
+Mu2e DAQ group.

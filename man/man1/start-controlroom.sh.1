@@ -1,0 +1,30 @@
+.TH START-CONTROLROOM.SH 1 "2026-10-06" "mu2edaq-controlroom-setup 1.0.0" "Mu2e DAQ Manual"
+.SH NAME
+start\-controlroom.sh \- start every configured VNC session and open every tunnel
+.SH SYNOPSIS
+.B bin/start\-controlroom.sh
+.SH DESCRIPTION
+Client\-side wrapper: exits 1 if
+.I venv/bin/crs\-remote
+is missing, then runs
+.B "crs\-remote start \-\-all"
+followed by
+.BR "crs\-tunnel open \-\-all" .
+Its comment says "all six"; it acts on whatever
+.I config/controlroom.yaml
+defines (three sessions as shipped).
+.SH OPTIONS
+None.
+.SH EXIT STATUS
+0 on success; otherwise the first failing command's status
+.RB ( "set \-e" ).
+.SH EXAMPLES
+.EX
+bin/start\-controlroom.sh && venv/bin/crs\-tunnel connect \-\-session shift\-main
+.EE
+.SH SEE ALSO
+.BR stop\-controlroom.sh (1),
+.BR crs\-remote (1),
+.BR crs\-tunnel (1)
+.SH AUTHOR
+Mu2e DAQ group.

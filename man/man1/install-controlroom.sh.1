@@ -1,0 +1,90 @@
+.TH INSTALL-CONTROLROOM.SH 1 "2026-10-06" "mu2edaq-controlroom-setup 1.0.0" "Mu2e DAQ Manual"
+.SH NAME
+install\-controlroom.sh \- install the control\-room bin area on a DAQ host
+.SH SYNOPSIS
+.B bash install\-controlroom.sh
+.SH DESCRIPTION
+Runs on a DAQ host as the session account, from an unpacked payload
+directory; normally invoked by
+.BR "crs\-remote install" .
+It:
+.IP 1. 4
+creates
+.IR $CRS_HOME/bin ,
+.IR $CRS_HOME/etc ,
+.I $CRS_HOME/log
+and
+.IR ~/.crs ;
+.IP 2. 4
+installs
+.BR start\-vnc\-session.sh ,
+.BR stop\-vnc\-session.sh ,
+.BR status\-vnc\-session.sh ,
+.BR vnc\-discovery\-responder.py ,
+.B crs\-app
+and
+.B crs\-provision\-desktop
+into
+.I bin
+(mode 0755);
+.IP 3. 4
+installs
+.I controlroom.yaml
+and
+.I apps.yaml
+(0644) and
+.I xstartup
+(0755) into
+.IR etc ;
+.IP 4. 4
+appends, once, a marker\-guarded PATH stanza to
+.IR ~/.bash_profile ;
+.IP 5. 4
+for every inventory entry whose
+.IR install_path / start
+or
+.IR install_path / stop
+exists, replaces
+.IB $CRS_HOME /bin/ script
+with a symbolic link to it.
+.PP
+Step 5 needs
+.BR python3 .
+It does not install
+.B mu2edaq\-discovery
+for that interpreter; the responder sidecar then falls back to its
+embedded copy of the protocol, and
+.B mu2edaq\-discover
+is not provided for the GUI's gateway scan.
+The links of step 5 are what
+.BR crs\-app (1)
+executes; see the warning there.
+.PP
+Idempotent.
+.SH OPTIONS
+None.
+.SH FILES
+.IR ~/controlroom/{bin,etc,log} ,
+.IR ~/.bash_profile .
+.SH ENVIRONMENT
+.TP
+.B CRS_HOME
+install area (default
+.IR ~/controlroom ).
+Note that
+.BR crs\-remote (1)
+and the PATH stanza assume the default.
+.SH EXIT STATUS
+0 on success; the failing command's status otherwise
+.RB ( "set \-e" ).
+.SH EXAMPLES
+.EX
+crs\-remote install \-\-session shift\-main     # normal use
+cd ~/.crs\-payload && bash install\-controlroom.sh   # by hand
+.EE
+.SH SEE ALSO
+.BR crs\-remote (1),
+.BR crs\-app (1),
+.BR start\-vnc\-session.sh (1)
+.SH AUTHOR
+Mu2e DAQ group.

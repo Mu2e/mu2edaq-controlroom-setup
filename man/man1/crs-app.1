@@ -1,61 +1,78 @@
-.TH CRS\-APP 1 "2026-06-12" "Mu2e DAQ" "Mu2e DAQ Manual"
+.TH CRS-APP 1 "2026-10-06" "mu2edaq-controlroom-setup 1.0.0" "Mu2e DAQ Manual"
 .SH NAME
-crs\-app, crs\-provision\-desktop \- start DAQ applications with assigned
-ports and generate their desktop icons
+crs\-app \- start or stop a DAQ application with its control\-room port assignments
 .SH SYNOPSIS
 .B crs\-app
-.IR start | stop
+.BR start | stop
 .I app\-id
 .br
 .B crs\-app list
-.br
-.B crs\-provision\-desktop
-.B \-\-session
-.I NAME
-.RB [ \-\-desktop\-dir
-.IR DIR ]
-.br
-.B crs\-provision\-desktop \-\-all\-local
 .SH DESCRIPTION
-.B crs\-app
-runs on a DAQ host.
-It reads
-.BR ~/controlroom/etc/apps.yaml ,
-exports
+Runs on a DAQ host, normally from a desktop launcher inside a VNC
+session.
+Reads the inventory
+.BR apps.yaml (5)
+(PyYAML if importable, else a built\-in parser for the flat subset the
+file uses), exports
 .BI CRS_PORT_ NAME
-for every named port assigned to the application, then execs the
-application's standardized
-.BR start\- / stop\- script
-(resolved in
-.B ~/controlroom/bin
-or the app's
-.IR install_path ).
+for every entry of the application's
+.B ports
+map, and replaces itself with the application's start or stop script via
+.BR execve (2):
+no arguments, the caller's working directory, inherited standard
+streams.
 .B DISPLAY
-is inherited, so icons inside a VNC desktop launch apps onto that
-session's display.
+is inherited, so applications open on the session's display.
 .PP
-.B crs\-provision\-desktop
-writes
-.IB app \-start.desktop
-/
-.IB app \-stop.desktop
-launchers (calling crs\-app) into
-.B ~/Desktop
-for every application that apps.yaml assigns to the given session.
-With
-.B \-\-all\-local
-it derives the session list from controlroom.yaml entries matching this
-host and
-.BR $USER .
+The script is looked up first as
+.IB $CRS_HOME /bin/ script,
+which
+.BR install\-controlroom.sh (1)
+creates as a
+.B symbolic link
+into the checkout, and only then as
+.IR install_path / script .
+Every start script in the suite computes its own directory from
+.B ${BASH_SOURCE[0]}
+without resolving links, so when the link exists the script looks for
+its virtual environment and configuration in
+.I ~/controlroom/bin
+and fails.
+Run the script from its checkout until this is fixed.
 .PP
-Both tools are stdlib-only and fall back to a restricted built-in YAML
-parser when PyYAML is not installed on the host.
+.B list
+prints id, repository and ports for every entry, sorted by id.
+.SH OPTIONS
+None.
+.SH FILES
+.TP
+.I ~/controlroom/etc/apps.yaml
+inventory.
+.TP
+.I ~/controlroom/bin/start\-mu2edaq\-*.sh
+links made by the installer.
+.SH ENVIRONMENT
+.TP
+.B CRS_HOME
+install area (default
+.IR ~/controlroom ).
+.TP
+.B CRS_APPS_CONFIG
+inventory path (default
+.IR $CRS_HOME/etc/apps.yaml ).
+.SH EXIT STATUS
+The application script's exit status after a successful exec; 1 for a
+usage error, a missing inventory, an unknown id or a script not found.
 .SH EXAMPLES
 .EX
-    crs\-app list
-    crs\-app start dashboard
-    crs\-provision\-desktop \-\-all\-local
+crs\-app list
+crs\-app start dashboard
+CRS_APPS_CONFIG=/tmp/apps.yaml crs\-app stop fts
 .EE
 .SH SEE ALSO
-.BR crs\-remote (1),
-.BR install\-controlroom (1)
+.BR crs\-provision\-desktop (1),
+.BR install\-controlroom.sh (1),
+.BR apps.yaml (5),
+.BR mu2edaq\-app (1)
+.SH AUTHOR
+Mu2e DAQ group.

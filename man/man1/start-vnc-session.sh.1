@@ -1,0 +1,118 @@
+.TH START-VNC-SESSION.SH 1 "2026-10-06" "mu2edaq-controlroom-setup 1.0.0" "Mu2e DAQ Manual"
+.SH NAME
+start\-vnc\-session.sh \- start a control\-room VNC session and its discovery sidecar on a DAQ host
+.SH SYNOPSIS
+.B start\-vnc\-session.sh
+.I session\-name display
+.RB [ \-g
+.IR WxH ]
+.RB [ \-d
+.IR depth ]
+.SH DESCRIPTION
+Runs on the session host as the session account, normally via
+.BR "crs\-remote start" .
+If
+.B "vncserver \-list"
+already shows
+.BI : display
+it prints
+.B SKIP
+and exits 0.
+Otherwise it runs
+.PP
+.EX
+vncserver :DISPLAY \-geometry WxH \-depth D \-localhost yes \-xstartup XSTARTUP
+.EE
+.PP
+.B "\-localhost yes"
+makes the VNC server accept connections only from the loopback
+interface; this line is where the control room's security model is
+enforced, and the only way in from elsewhere is an ssh forward such as
+.BR crs\-tunnel (1)
+makes.
+It holds only for sessions this script starts: a session started by
+other means (a systemd
+.B vncserver@
+unit, or
+.B vncserver
+by hand) gets whatever the host's TigerVNC configuration says.
+Check a running session with
+.BR "ss \-ltn 'sport = :590N'" ;
+the local address must be 127.0.0.1 or ::1.
+Authentication within the host is the VNC password in
+.IR ~/.vnc/passwd ,
+which must exist beforehand.
+.I XSTARTUP
+is
+.I $CRS_HOME/etc/xstartup
+if executable, else
+.IR ~/.vnc/xstartup ;
+the shipped one starts XFCE with
+.I ~/controlroom/bin
+on the PATH.
+.PP
+It then starts
+.BR vnc\-discovery\-responder.py (1)
+in the background under the system
+.B python3
+(no virtual environment), records its pid, and prints
+.BR OK .
+If the responder is not installed it prints
+.B WARN
+and continues.
+.SH OPTIONS
+.TP
+.BI \-g " WxH"
+geometry; default
+.B $CRS_GEOMETRY
+or 1920x1080.
+.TP
+.BI \-d " depth"
+colour depth; default
+.B $CRS_DEPTH
+or 24.
+.SH FILES
+.TP
+.I ~/.crs/vnc\-responder\-:N.pid
+sidecar pid.
+.TP
+.IR $CRS_HOME/log/vnc\- NAME .log ", " $CRS_HOME/log/vnc\-responder\- NAME .log
+logs.
+.SH ENVIRONMENT
+.TP
+.B CRS_HOME
+install area (default
+.IR ~/controlroom ).
+.TP
+.BR CRS_GEOMETRY ", " CRS_DEPTH
+defaults for
+.BR \-g ", " \-d .
+.TP
+.B CRS_ANNOUNCE_INTERVAL
+seconds between the sidecar's unsolicited multicast announcements
+(default 30; 0 disables).
+.BR crs\-remote (1)
+does not pass the configuration file's
+.B discovery.announce_interval
+here.
+.SH EXIT STATUS
+0 started or already running; 1 usage error (including
+.BR \-h ),
+or non\-numeric display;
+otherwise
+.BR vncserver 's
+status
+.RB ( "set \-e" ).
+.SH EXAMPLES
+.EX
+start\-vnc\-session.sh shift\-main 2 \-g 1920x1080
+CRS_ANNOUNCE_INTERVAL=0 start\-vnc\-session.sh dcs\-main 1
+.EE
+.SH SEE ALSO
+.BR stop\-vnc\-session.sh (1),
+.BR status\-vnc\-session.sh (1),
+.BR vnc\-discovery\-responder.py (1),
+.BR crs\-remote (1),
+.BR vncserver (1)
+.SH AUTHOR
+Mu2e DAQ group.

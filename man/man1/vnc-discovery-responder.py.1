@@ -1,0 +1,102 @@
+.TH VNC-DISCOVERY-RESPONDER.PY 1 "2026-10-06" "mu2edaq-controlroom-setup 1.0.0" "Mu2e DAQ Manual"
+.SH NAME
+vnc\-discovery\-responder.py \- mu2edaq\-discovery sidecar that advertises a VNC session
+.SH SYNOPSIS
+.B python3 vnc\-discovery\-responder.py
+.B \-\-name
+.I NAME
+.B \-\-display
+.I :N
+.B \-\-port
+.I PORT
+.RB [ \-\-geometry
+.IR WxH ]
+.RB [ \-\-account
+.IR USER ]
+.RB [ \-\-announce\-interval
+.IR SEC ]
+.SH DESCRIPTION
+VNC does not speak the mu2edaq\-discovery protocol, so
+.BR start\-vnc\-session.sh (1)
+runs this sidecar beside each session.
+It answers DISCOVER queries on 239.255.42.99:28999 with an ANNOUNCE
+carrying
+.BR app=vnc ,
+.BR scheme=vnc ,
+.BR version=1.0 ,
+.B port
+= the VNC port,
+.B name
+=
+.RI "\(dqVNC " nodename " :N (" NAME ")\(dq"
+and
+.B meta
+=
+.RB { display ,
+.BR account ,
+.BR geometry },
+all strings.
+With a positive interval it also multicasts the ANNOUNCE unsolicited.
+The advertised port listens on loopback only; a client must map it to a
+configured session and tunnel to it, as
+.BR crs\-gui (1)
+does.
+.PP
+It uses
+.B mu2edaq_discovery.Responder
+when that package is importable by the interpreter running it \(em the
+system
+.BR python3 ,
+not a virtual environment \(em and otherwise an embedded copy of the
+protocol.
+The embedded copy differs from the reference implementation: it replies
+to a DISCOVER whose
+.B filter
+is an empty list or whose
+.B qid
+is absent or not a string, and a
+.B filter
+that is a non\-empty list or a string raises inside its receive loop,
+which ends the responder thread and with it this process.
+.SH OPTIONS
+.TP
+.BI \-\-name " NAME"
+session name (required).
+.TP
+.BI \-\-display " :N"
+display (required).
+.TP
+.BI \-\-port " PORT"
+VNC port (required).
+.TP
+.BI \-\-geometry " WxH"
+included in
+.B meta
+when given.
+.TP
+.BI \-\-account " USER"
+default
+.BR $USER .
+.TP
+.BI \-\-announce\-interval " SEC"
+default
+.B $CRS_ANNOUNCE_INTERVAL
+or 30; 0 disables unsolicited announcements.
+.SH ENVIRONMENT
+.BR CRS_ANNOUNCE_INTERVAL ,
+.BR USER .
+.SH EXIT STATUS
+0 on SIGTERM or SIGINT, and also 0 when the responder thread dies (bind
+failure, or the fallback's filter crash); check the log.
+.SH EXAMPLES
+.EX
+python3 ~/controlroom/bin/vnc\-discovery\-responder.py \e
+    \-\-name shift\-main \-\-display :2 \-\-port 5902 \-\-geometry 1920x1080
+python3 \-c 'import mu2edaq_discovery'   # which implementation will run
+.EE
+.SH SEE ALSO
+.BR start\-vnc\-session.sh (1),
+.BR crs\-gui (1),
+.BR mu2edaq\-discover (1)
+.SH AUTHOR
+Mu2e DAQ group.

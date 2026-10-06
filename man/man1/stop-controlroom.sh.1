@@ -1,0 +1,27 @@
+.TH STOP-CONTROLROOM.SH 1 "2026-10-06" "mu2edaq-controlroom-setup 1.0.0" "Mu2e DAQ Manual"
+.SH NAME
+stop\-controlroom.sh \- close every tunnel and stop every configured VNC session
+.SH SYNOPSIS
+.B bin/stop\-controlroom.sh
+.SH DESCRIPTION
+Client\-side wrapper: exits 1 if
+.I venv/bin/crs\-remote
+is missing, runs
+.B "crs\-tunnel close \-\-all"
+(failures ignored), then
+.BR "crs\-remote stop \-\-all" .
+Stopping a session disconnects every operator attached to it.
+.SH OPTIONS
+None.
+.SH EXIT STATUS
+.BR "crs\-remote stop" 's
+status; 1 without a venv.
+.SH EXAMPLES
+.EX
+bin/stop\-controlroom.sh
+.EE
+.SH SEE ALSO
+.BR start\-controlroom.sh (1),
+.BR crs\-remote (1)
+.SH AUTHOR
+Mu2e DAQ group.

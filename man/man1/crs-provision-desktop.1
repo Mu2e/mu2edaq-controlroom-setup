@@ -1,0 +1,111 @@
+.TH CRS-PROVISION-DESKTOP 1 "2026-10-06" "mu2edaq-controlroom-setup 1.0.0" "Mu2e DAQ Manual"
+.SH NAME
+crs\-provision\-desktop \- write the XFCE launchers for the DAQ applications assigned to a VNC session
+.SH SYNOPSIS
+.B crs\-provision\-desktop
+.B \-\-session
+.I NAME
+.RB [ \-\-session
+.IR NAME ]...\&
+.RB [ \-\-desktop\-dir
+.IR DIR ]
+.br
+.B crs\-provision\-desktop \-\-all\-local
+.RB [ \-\-desktop\-dir
+.IR DIR ]
+.SH DESCRIPTION
+Runs on a DAQ host as the session account.
+For every inventory entry whose
+.B sessions
+list intersects the requested session names, writes
+.IB DIR / id \-start.desktop
+and
+.IB DIR / id \-stop.desktop
+with
+.BI Exec= $CRS_HOME /bin/crs\-app
+.BR start | stop
+.I id
+(the path written is absolute, with
+.B ~
+already expanded), makes them executable and marks them gio\-trusted
+.RB ( "gio set FILE metadata::trusted true" ;
+failure ignored).
+.PP
+.B \-\-session
+names are not checked against
+.IR controlroom.yaml .
+An application whose sessions are all undefined there gets no launcher
+anywhere; with the shipped configuration that is eight of twelve, and
+only
+.B shift\-main
+receives launchers (controlcenter, bigredbox, downtime\-logger,
+trigger\-scalers);
+.B dcs\-main
+and
+.B trig\-main
+receive none.
+Launchers of applications no longer assigned are not removed.
+.PP
+.B \-\-all\-local
+selects the sessions in
+.I controlroom.yaml
+whose
+.B account
+is
+.B $USER
+and whose host short name is this host's.
+.PP
+The configuration files are read with PyYAML when the system
+.B python3
+can import it, otherwise with the restricted parser inside
+.BR crs\-app (1).
+That parser understands only the
+.B apps:
+list: under it
+.B \-\-all\-local
+finds no sessions and exits 1, and every
+.B terminal:
+value is read as a non\-empty string, so every launcher is written with
+.BR Terminal=true .
+.B \-\-session
+is unaffected.
+.SH OPTIONS
+.TP
+.BI \-\-session " NAME"
+session name; repeatable; exclusive with
+.BR \-\-all\-local .
+.TP
+.B \-\-all\-local
+as above.
+.TP
+.BI \-\-desktop\-dir " DIR"
+default
+.IR ~/Desktop .
+.SH FILES
+.IR ~/controlroom/etc/apps.yaml ,
+.IR ~/controlroom/etc/controlroom.yaml .
+.SH ENVIRONMENT
+.TP
+.B CRS_HOME
+install area (default
+.IR ~/controlroom ).
+.TP
+.B USER
+account matched by
+.BR \-\-all\-local .
+.SH EXIT STATUS
+0, including when no application matched (a message says so);
+1 when
+.B \-\-all\-local
+finds no session; 2 on a command\-line error.
+.SH EXAMPLES
+.EX
+crs\-provision\-desktop \-\-session shift\-main
+crs\-provision\-desktop \-\-all\-local
+.EE
+.SH SEE ALSO
+.BR crs\-app (1),
+.BR crs\-remote (1),
+.BR apps.yaml (5)
+.SH AUTHOR
+Mu2e DAQ group.

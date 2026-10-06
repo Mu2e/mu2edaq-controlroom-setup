@@ -1,86 +1,124 @@
-.TH CRS\-REMOTE 1 "2026-06-12" "Mu2e DAQ" "Mu2e DAQ Manual"
+.TH CRS-REMOTE 1 "2026-10-06" "mu2edaq-controlroom-setup 1.0.0" "Mu2e DAQ Manual"
 .SH NAME
-crs\-remote \- run control room operations on the DAQ hosts over ssh
+crs\-remote \- run control\-room VNC and installation commands on the DAQ hosts over ssh
 .SH SYNOPSIS
 .B crs\-remote
-.IR start | stop | status | install | provision
+.BR start | stop | status | install | provision
 .RB [ \-\-session
-.IR NAME ]
-.RB [ \-\-host
-.IR H ]
-.RB [ \-\-all ]
+.IR NAME " |"
+.B \-\-host
+.IR H " |"
+.BR \-\-all ]
 .RB [ \-\-config
 .IR FILE ]
 .RB [ \-\-ssh\-config
 .IR FILE ]
 .SH DESCRIPTION
+For each selected session,
 .B crs\-remote
-executes the server-side control room scripts on the DAQ hosts as the
-session-owner accounts, routed through the gateway
-.RB ( ProxyJump )
-with Kerberos authentication.
-Output lines are prefixed with
-.IR [account@host] .
+runs
+.PP
+.EX
+ssh \-o GSSAPIAuthentication=yes \-o GSSAPIDelegateCredentials=yes \e
+    \-J GATEWAY \-o BatchMode=yes ACCOUNT@HOST 'COMMAND'
+.EE
+.PP
+logging in as the session's shared
+.B account
+\(em not
+.BR personal_user ,
+unlike
+.BR crs\-tunnel (1).
+The operator's Kerberos principal must therefore be accepted by each
+shared account (its
+.IR .k5login ).
+Commit da08771 recorded that the VNC accounts on mu2e\-mgr\-01 refused it.
+Remote output is printed with an
+.BI [ account @ shorthost ]
+prefix; remote stderr is printed only for a failing command.
 .SH COMMANDS
 .TP
 .B start
-Run
-.B start\-vnc\-session.sh
-for each selected session: starts the TigerVNC server
-.RB ( "\-localhost yes" ,
-XFCE via xstartup) and its discovery responder sidecar.
+.B ~/controlroom/bin/start\-vnc\-session.sh
+.I NAME DISPLAY
+.B \-g
+.I GEOMETRY
+.B \-d
+.IR DEPTH .
 .TP
 .B stop
-Run
-.BR stop\-vnc\-session.sh :
-kills the responder, then the VNC server.
+.B ~/controlroom/bin/stop\-vnc\-session.sh
+.I NAME
+.IR DISPLAY .
 .TP
 .B status
-Run
-.BR status\-vnc\-session.sh ;
-prints parseable
-.I name|display|port|state|responder
-lines.
-Defaults to
+.B ~/controlroom/bin/status\-vnc\-session.sh
+.I NAME
+.IR DISPLAY ;
+selects
 .B \-\-all
 when no target is given.
 .TP
 .B install
-Ship the server payload (scripts, configs, xstartup) as a tar stream
-over ssh and run
-.B install\-controlroom.sh
-on the host: creates
-.BR ~/controlroom/{bin,etc,log} ,
-adds the PATH stanza to
-.BR ~/.bash_profile ,
-and symlinks app start/stop scripts into the bin area.
-Runs once per (host, account) pair.
+Streams a gzip tar of
+.I server/
+plus
+.I config/controlroom.yaml
+and
+.I config/apps.yaml
+over the ssh channel into
+.IR ~/.crs\-payload ,
+runs
+.BR install\-controlroom.sh (1)
+there and deletes the payload.
+Runs once per distinct (host, account) pair.
 .TP
 .B provision
-Run
-.B crs\-provision\-desktop
-on the host to (re)generate the XFCE desktop icons for the selected
-session(s).
+.B ~/controlroom/bin/crs\-provision\-desktop \-\-session
+.IR NAME .
+.PP
+The remote paths are fixed at
+.IR ~/controlroom/bin ;
+the
+.B install_dir
+setting and
+.B CRS_INSTALL_DIR
+are read but not used.
 .SH OPTIONS
-See
-.BR crs\-tunnel (1)
-for
-.BR \-\-session / \-\-host / \-\-all / \-\-config / \-\-ssh\-config .
+As
+.BR crs\-tunnel (1),
+without
+.BR \-\-viewer .
+.SH FILES
+.TP
+.I config/controlroom.yaml
+sessions and gateway.
+.TP
+.I config/apps.yaml
+shipped by
+.BR install .
+.SH ENVIRONMENT
+.BR CRS_CONFIG ,
+.BR CRS_GATEWAY ,
+as in
+.BR crs\-tunnel (1).
+.SH EXIT STATUS
+0 if every remote command exited 0; 1 if any failed, on a configuration
+or selection error, or with no Kerberos ticket; 2 on a command\-line
+error.
 .SH EXAMPLES
-First-time setup of one host, then everything:
 .EX
-    crs\-remote install \-\-session daq\-dl2
-    crs\-remote start   \-\-session daq\-dl2
-    crs\-remote install \-\-all
-    crs\-remote start   \-\-all
-    crs\-remote status
+crs\-remote install \-\-all
+crs\-remote provision \-\-session shift\-main
+crs\-remote start \-\-session dcs\-main
+crs\-remote status
+crs\-remote stop \-\-host mu2e\-mgr\-01
 .EE
 .SH SEE ALSO
 .BR crs\-tunnel (1),
 .BR crs\-gui (1),
-.BR start\-vnc\-session (1),
-.BR install\-controlroom (1)
-.SH REPOSITORY
-.UR https://github.com/Mu2e/mu2edaq-controlroom-setup
-https://github.com/Mu2e/mu2edaq-controlroom-setup
-.UE
+.BR start\-vnc\-session.sh (1),
+.BR install\-controlroom.sh (1),
+.BR crs\-provision\-desktop (1)
+.SH AUTHOR
+Mu2e DAQ group.

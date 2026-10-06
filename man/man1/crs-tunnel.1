@@ -1,14 +1,14 @@
-.TH CRS\-TUNNEL 1 "2026-06-12" "Mu2e DAQ" "Mu2e DAQ Manual"
+.TH CRS-TUNNEL 1 "2026-10-06" "mu2edaq-controlroom-setup 1.0.0" "Mu2e DAQ Manual"
 .SH NAME
-crs\-tunnel \- manage ssh tunnels to the control room VNC sessions
+crs\-tunnel \- open, close, probe or attach to the ssh tunnels for the control\-room VNC sessions
 .SH SYNOPSIS
 .B crs\-tunnel
-.IR open | close | status | connect
+.BR open | close | status | connect
 .RB [ \-\-session
-.IR NAME ]
-.RB [ \-\-host
-.IR H ]
-.RB [ \-\-all ]
+.IR NAME " |"
+.B \-\-host
+.IR H " |"
+.BR \-\-all ]
 .RB [ \-\-config
 .IR FILE ]
 .RB [ \-\-ssh\-config
@@ -16,95 +16,131 @@ crs\-tunnel \- manage ssh tunnels to the control room VNC sessions
 .RB [ \-\-viewer
 .IR BIN ]
 .SH DESCRIPTION
-.B crs\-tunnel
-opens, closes, probes, or attaches to ssh tunnels carrying the control
-room VNC traffic.
-Each session in
-.B controlroom.yaml
-maps a client-side
-.I local_port
-to
-.I 5900+display
-on its DAQ host, routed through the gateway with
-.B ProxyJump
-and authenticated with Kerberos (GSSAPI).
-One master ssh per session keeps a control socket in
-.BR ~/.crs/ ,
-so tunnels survive and can be probed
-.RB ( "ssh \-O check" )
-or closed
-.RB ( "ssh \-O exit" )
-without pkill.
+Runs on the operator's machine outside the DAQ network.
+For each selected session of
+.I controlroom.yaml
+it maintains one backgrounded master ssh,
+.PP
+.EX
+ssh \-o GSSAPIAuthentication=yes \-o GSSAPIDelegateCredentials=yes \e
+    \-J GATEWAY \-f \-N \-M \-S ~/.crs/ssh\-ctrl\-HOST\-LPORT \e
+    \-o ExitOnForwardFailure=yes \-L LPORT:localhost:5900+DISPLAY USER@HOST
+.EE
+.PP
+where
+.I USER
+is
+.B personal_user
+from the configuration, or the session account when that is empty.
+The forward's far end is resolved on the session host, which is the only
+place the VNC server listens (it is started with
+.BR "\-localhost yes" ).
+The local listener has no explicit bind address, so it is loopback\-only
+unless the client's ssh configuration sets
+.BR GatewayPorts .
+The login user on the jump host is not set by this tool; it comes from
+the client's
+.BR ssh_config (5)
+or the local user name.
 .SH COMMANDS
 .TP
 .B open
-Open the tunnel(s).
-Requires a valid Kerberos ticket
-.RB ( "klist \-s" ).
+Check for a Kerberos ticket
+.RB ( "klist \-s" ),
+then open each selected tunnel not already open.
+The first failure aborts the remaining sessions.
 .TP
 .B close
-Close the tunnel(s) via their control sockets and remove stale sockets.
+.B "ssh \-O exit"
+on each control socket, then remove the socket file.
 .TP
 .B status
-Print one line per session: state, local port mapping, account.
-Defaults to
+One line per session: name, open or closed, local port, host, VNC port,
+account.
+A socket that fails
+.B "ssh \-O check"
+is deleted and reported closed.
+Selects
 .B \-\-all
 when no target is given.
 .TP
 .B connect
-Open the tunnel if needed, then launch a VNC client against the local
-port. On macOS this runs
-\fBopen vnc://localhost:\fIPORT\fR
-(the built\-in Screen Sharing client); elsewhere it runs
-.BR "vncviewer \-Shared" .
-An explicit
+Open if needed, then start a viewer on
+.BR localhost: LPORT :
+.B "open vnc://localhost:LPORT"
+(macOS Screen Sharing) when no
 .B \-\-viewer
-overrides this on any platform.
+is given on macOS, otherwise
+.IB BIN " \-Shared localhost:" LPORT
+with
+.I BIN
+defaulting to
+.B vncviewer
+on the PATH or the TigerVNC application bundle.
 .SH OPTIONS
 .TP
 .BI \-\-session " NAME"
-Operate on one named session.
+one session by name.
 .TP
 .BI \-\-host " H"
-Operate on every session on a host (short or FQDN).
+every session on host
+.I H
+(short name or FQDN).
 .TP
 .B \-\-all
-Operate on every configured session.
+every configured session.
 .TP
 .BI \-\-config " FILE"
-Path to controlroom.yaml (default: ./config/, or
-.BR CRS_CONFIG ).
+.IR controlroom.yaml .
+Default:
+.BR $CRS_CONFIG ,
+else
+.I ./config/controlroom.yaml
+relative to the working directory, else the copy in the package tree.
 .TP
 .BI \-\-ssh\-config " FILE"
-Alternate ssh config passed as
-.BR "ssh \-F" ;
-used by the test harness to alias cluster hosts to localhost.
+passed to ssh as
+.BR \-F ;
+used by the test suite.
 .TP
 .BI \-\-viewer " BIN"
-VNC viewer binary for
+VNC client for
 .BR connect .
-Overrides the macOS
-.B open vnc://
-default.
-.SH EXAMPLES
-.EX
-    crs\-tunnel open \-\-all
-    crs\-tunnel status
-    crs\-tunnel connect \-\-session dcs\-main
-    crs\-tunnel close \-\-host mu2e\-mgr\-01
-.EE
 .SH FILES
 .TP
-.B ~/.crs/ssh\-ctrl\-*
-SSH control sockets, one per open tunnel.
+.I ~/.crs/ssh\-ctrl\-SHORTHOST\-LPORT
+one control socket per open tunnel.
 .TP
-.B config/controlroom.yaml
-Central session/gateway configuration.
+.I config/controlroom.yaml
+sessions, gateway,
+.BR personal_user .
+.SH ENVIRONMENT
+.TP
+.B CRS_CONFIG
+configuration path.
+.TP
+.B CRS_GATEWAY
+overrides
+.B gateway
+(the
+.B \-J
+host).
+.SH EXIT STATUS
+0 on success; 1 on a configuration error, unknown session or host, no
+Kerberos ticket, or a failed
+.BR "ssh \-f" ;
+2 on a command\-line error.
+.SH EXAMPLES
+.EX
+crs\-tunnel status
+crs\-tunnel open \-\-all
+crs\-tunnel connect \-\-session shift\-main
+crs\-tunnel close \-\-host mu2e\-mgr\-01
+.EE
 .SH SEE ALSO
 .BR crs\-remote (1),
 .BR crs\-gui (1),
+.BR start\-vnc\-session.sh (1),
 .BR ssh (1)
-.SH REPOSITORY
-.UR https://github.com/Mu2e/mu2edaq-controlroom-setup
-https://github.com/Mu2e/mu2edaq-controlroom-setup
-.UE
+.SH AUTHOR
+Mu2e DAQ group.
