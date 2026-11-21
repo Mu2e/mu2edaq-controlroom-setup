@@ -1,0 +1,77 @@
+.TH CRS\-SCREEN 1 "2026-11-20" "Mu2e DAQ" "Mu2e DAQ Manual"
+.SH NAME
+crs\-screen \- open Mu2e control room screens from a remote control room
+.SH SYNOPSIS
+.B remote\-site/crs\-screen
+.B \-\-site
+.I NAME
+.IR SESSION " ..."
+.br
+.B remote\-site/crs\-screen
+.B \-\-site
+.I NAME
+.B \-\-check
+.RI [ SESSION " ...]"
+.SH DESCRIPTION
+For each
+.IR SESSION ,
+.B crs\-screen
+gets a Kerberos ticket if there is none (from the site keytab), then runs
+.B crs\-tunnel connect
+with the site overlay
+.BR remote\-site/sites/ \fINAME\fB.yaml ,
+the site's VNC viewer and saved password files.
+Whether the viewer is view\-only comes from the overlay.
+It never starts or stops anything on the DAQ hosts.
+Launchers made by
+.B remote\-site/install.sh
+run this command in a terminal window; on errors the window stays open
+until Enter is pressed.
+.SH OPTIONS
+.TP
+.BI \-\-site " NAME"
+Site whose files in
+.B remote\-site/sites/
+to use (default:
+.BR CRS_REMOTE_SITE ).
+.TP
+.B \-\-check
+Do not open screens. Get a ticket, then make one
+.B "ssh \-J"
+login per distinct host for the given sessions (all, if none given),
+interactively, so host\-key questions are answered; print PASS or FAIL.
+.SH ENVIRONMENT
+.TP
+.B CRS_REMOTE_SITE
+Default site.
+.TP
+.B DRY_RUN
+If set, print the commands and change nothing.
+.TP
+.B CRS_NO_PAUSE
+If set, do not wait for Enter after an error.
+.SH FILES
+.TP
+.BI remote\-site/sites/ NAME .yaml
+Site overlay for
+.BR crs\-tunnel (1).
+.TP
+.BI remote\-site/sites/ NAME .env
+Launcher settings: SITE_PRINCIPAL, SITE_KEYTAB, SITE_VIEWER,
+SITE_PASSWORD_FILE, SITE_LAUNCHERS.
+.TP
+.BI ~/.config/mu2edaq\-remote\-site/ NAME .env
+Machine\-local overrides, read after the site file.
+.TP
+.B ~/.crs/tunnels.log ", " ~/.crs/viewer\-*.log
+Output of the tunnel ssh processes and of each viewer.
+.SH EXAMPLES
+.EX
+    remote\-site/crs\-screen \-\-site caltech \-\-check
+    remote\-site/crs\-screen \-\-site caltech shift\-main cr01
+    DRY_RUN=1 remote\-site/crs\-screen \-\-site caltech dcs\-main
+.EE
+.SH SEE ALSO
+.BR crs\-nodes (1),
+.BR crs\-tunnel (1),
+.B remote\-site/README.md

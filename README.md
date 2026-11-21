@@ -67,6 +67,20 @@ Or piecemeal: `crs-remote {start|stop|status}` and
 `crs-tunnel {open|close|status|connect}` with
 `--session NAME | --host H | --all`.
 
+## Remote control rooms
+
+Remote institutions watch these screens with `remote-site/`: one site file
+pair (`remote-site/sites/<site>.yaml` overlay and `.env` settings), then
+
+```bash
+remote-site/install.sh --site caltech      # Linux or macOS launchers
+remote-site/crs-screen --site caltech --check
+```
+
+Launchers open screens view-only through `crs-tunnel connect
+--site-config ...`; screens a site adds are unmanaged, so `crs-remote`
+never starts or stops them. See [remote-site/README.md](remote-site/README.md).
+
 ## Port assignments
 
 `config/apps.yaml` is the single source of port truth. Desktop icons
@@ -80,6 +94,8 @@ deliberate reassignments to remove collisions: heartbeatmonitor HTTP
 
 Command line > environment (`CRS_CONFIG`, `CRS_GATEWAY`,
 `CRS_INSTALL_DIR`, `CRS_PORT_*`, …) > YAML config > defaults.
+For `crs-tunnel` only, site overlays (`--site-config`, else
+`CRS_SITE_CONFIG`) sit between controlroom.yaml and the environment.
 
 ## Layout
 
@@ -87,6 +103,7 @@ Command line > environment (`CRS_CONFIG`, `CRS_GATEWAY`,
 - `src/mu2edaq_controlroom_setup/` — Python package (`crs-tunnel`, `crs-remote`, `crs-gui`)
 - `server/` — scripts installed onto DAQ hosts (no venv needed there)
 - `bin/` — client-side convenience wrappers
+- `remote-site/` — launchers and site files for remote control rooms (Linux, macOS)
 - `man/man1/` — man pages for every tool
 - `doc/issues/` — draft GitHub issues for per-app standardization and discovery adoption
 - `tests/` — pytest suite (`venv/bin/pytest`)

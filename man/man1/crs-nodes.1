@@ -1,0 +1,29 @@
+.TH CRS\-NODES 1 "2026-11-20" "Mu2e DAQ" "Mu2e DAQ Manual"
+.SH NAME
+crs\-nodes \- log in to a Mu2e DAQ machine from a remote control room
+.SH SYNOPSIS
+.B remote\-site/crs\-nodes
+.B \-\-site
+.I NAME
+.SH DESCRIPTION
+Gets a Kerberos ticket if there is none (site keytab), then runs
+.B ssh\-selector
+from mu2edaq\-cluster\-tools on its Mu2e DAQ host list.
+Choose the account the site identity is authorized as (the overlay's
+.BR personal_user ).
+.B remote\-site/install.sh
+installs
+.B ssh\-selector
+when
+.B ../mu2edaq\-cluster\-tools
+is checked out next to controlroom\-setup.
+.SH ENVIRONMENT
+.BR CRS_REMOTE_SITE ,
+.BR DRY_RUN ,
+.B CRS_NO_PAUSE
+as for
+.BR crs\-screen (1).
+The site file may set SITE_SSH_SELECTOR and SITE_DAQ_HOSTS.
+.SH SEE ALSO
+.BR crs\-screen (1),
+.BR ssh\-selector (1)

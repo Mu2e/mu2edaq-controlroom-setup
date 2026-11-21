@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Remote Control Rooms - Mu2e DAQ Control Room Setup</title>
+  <link rel="stylesheet" href="assets/site.css">
+</head>
+<body>
+  <header class="site-header"><div class="header-inner"><h1 class="site-title">Remote Control Rooms</h1><p class="site-subtitle">View-only launchers for remote institutions, on Linux and macOS.</p></div></header>
+  <div class="layout">
+    <nav class="sidebar" aria-label="Documentation">
+      <h2>Docs</h2>
+      <a href="index.html">Overview</a>
+      <a href="install.html">Install and Setup</a>
+      <a href="operations.html">Daily Operation</a>
+      <a href="commands.html">Command Reference</a>
+      <a href="apps.html">Application Launchers</a>
+      <a href="remote-site.html">Remote Control Rooms</a>
+      <a href="troubleshooting.html">Troubleshooting</a>
+    </nav>
+    <main class="content">
+      <h1>Remote Control Rooms</h1>
+      <p>Remote institutions watch the control room screens with <code>remote-site/</code>. Each site has an overlay <code>remote-site/sites/&lt;site&gt;.yaml</code> (login account, view-only, extra screens) and settings <code>remote-site/sites/&lt;site&gt;.env</code> (Kerberos identity, keytab path, viewer, password files, launchers). The full guide is <code>remote-site/README.md</code>.</p>
+
+      <h2 id="install">Install</h2>
+      <pre><code>remote-site/install.sh --site caltech
+remote-site/crs-screen --site caltech --check</code></pre>
+      <p>The installer checks prerequisites, makes <code>venv/</code> with PyYAML only (or reuses the one from <code>bootstrap.sh</code>), checks the overlay, finds a VNC viewer, installs <code>ssh-selector</code> from a sibling <code>mu2edaq-cluster-tools</code>, checks keytab and password file permissions, and makes the launchers: <code>.desktop</code> entries on Linux, apps in <code>~/Applications/Mu2e</code> on macOS. It never runs <code>crs-remote</code>.</p>
+
+      <h2 id="use">Use</h2>
+      <pre><code>remote-site/crs-screen --site caltech shift-main cr01
+remote-site/crs-nodes --site caltech
+venv/bin/crs-tunnel status --site-config remote-site/sites/caltech.yaml</code></pre>
+
+      <h2 id="overlays">Site overlays</h2>
+      <p>Only <code>crs-tunnel</code> reads overlays: <code>--site-config FILE</code> (repeatable), else <code>CRS_SITE_CONFIG</code>. Allowed keys are <code>personal_user</code>, <code>gateway</code> (last file wins; <code>CRS_GATEWAY</code> beats both), <code>view_only</code> (true in any file wins) and <code>sessions</code>. Added sessions are unmanaged: <code>crs-remote</code> ignores overlays and refuses unmanaged sessions, so a site's screens are never started or stopped by these tools. Repeated names, local ports or host displays are errors naming the overlay.</p>
+
+      <h2 id="macos">macOS</h2>
+      <p>Screen Sharing cannot be view-only or read a password file. With <code>--view-only</code>, <code>--password-file</code> or a view-only overlay, <code>crs-tunnel connect</code> uses TigerVNC Viewer.app and stops before launching anything if it is missing. Plain <code>crs-tunnel connect</code> still opens Screen Sharing.</p>
+
+      <h2 id="view-only">View-only</h2>
+      <p>View-only prevents accidental input from a remote room. It is not a security boundary: real enforcement would be a separate view-only VNC password on the DAQ hosts.</p>
+    </main>
+  </div>
+</body>
+</html>

@@ -7,6 +7,7 @@ This directory contains operational notes for `mu2edaq-controlroom-setup`.
 - [operations.html](operations.html) - daily start, connect, status, stop, and GUI workflow.
 - [commands.html](commands.html) - command reference and configuration overrides.
 - [apps.html](apps.html) - application launcher contract for DAQ packages.
+- [remote-site.html](remote-site.html) - view-only launchers for remote control rooms (Linux, macOS).
 - [troubleshooting.html](troubleshooting.html) - common checks and recovery commands.
 - [usage.md](usage.md) - Markdown version of the same operational guidance.
 - [issues/](issues/) - draft issue text for per-application start/stop standardization and discovery adoption.

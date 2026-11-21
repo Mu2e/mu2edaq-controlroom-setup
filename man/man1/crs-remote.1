@@ -21,6 +21,12 @@ session-owner accounts, routed through the gateway
 with Kerberos authentication.
 Output lines are prefixed with
 .IR [account@host] .
+.PP
+.B crs\-remote
+reads only controlroom.yaml, never site overlays
+.RB ( CRS_SITE_CONFIG ),
+and refuses sessions marked unmanaged: screens a remote site watches are
+never started, stopped, installed or provisioned from here.
 .SH COMMANDS
 .TP
 .B start

@@ -13,8 +13,13 @@ crs\-tunnel \- manage ssh tunnels to the control room VNC sessions
 .IR FILE ]
 .RB [ \-\-ssh\-config
 .IR FILE ]
+.RB [ \-\-site\-config
+.IR FILE ]...
 .RB [ \-\-viewer
 .IR BIN ]
+.RB [ \-\-view\-only ]
+.RB [ \-\-password\-file
+.IR PATTERN ]
 .SH DESCRIPTION
 .B crs\-tunnel
 opens, closes, probes, or attaches to ssh tunnels carrying the control
@@ -30,7 +35,8 @@ on its DAQ host, routed through the gateway with
 and authenticated with Kerberos (GSSAPI).
 One master ssh per session keeps a control socket in
 .BR ~/.crs/ ,
-so tunnels survive and can be probed
+so tunnels survive (also the closing of the terminal they were opened
+from) and can be probed
 .RB ( "ssh \-O check" )
 or closed
 .RB ( "ssh \-O exit" )
@@ -60,6 +66,16 @@ port. On macOS this runs
 An explicit
 .B \-\-viewer
 overrides this on any platform.
+Screen Sharing cannot be view\-only or read a password file, so on macOS
+.B \-\-view\-only
+or
+.B \-\-password\-file
+(or a site overlay with
+.BR "view_only: true" )
+uses a TigerVNC viewer instead, and stops with an error before launching
+anything if none is found.
+The viewer runs in its own session, so closing the terminal does not
+close it.
 .SH OPTIONS
 .TP
 .BI \-\-session " NAME"
@@ -86,23 +102,77 @@ VNC viewer binary for
 Overrides the macOS
 .B open vnc://
 default.
+.TP
+.BI \-\-site\-config " FILE"
+Site overlay applied on top of controlroom.yaml; repeatable, in order.
+Default: the
+.RB : \-separated
+list in
+.BR CRS_SITE_CONFIG .
+An overlay may set
+.B personal_user
+and
+.B gateway
+(last file wins),
+.B view_only
+(true in any file wins) and add
+.BR sessions ,
+which are never managed by
+.BR crs\-remote (1).
+Other keys, and names, local ports or host displays that repeat existing
+ones, are errors. See
+.BR remote\-site/README.md .
+.TP
+.B \-\-view\-only
+.B connect
+opens the viewer view\-only
+.RB ( \-ViewOnly ).
+Also on when a site overlay sets
+.BR "view_only: true" .
+.TP
+.BI \-\-password\-file " PATTERN"
+VNC password file passed to the viewer
+.RB ( PasswordFile= ).
+.B {account}
+and
+.B {session}
+are replaced per session; if the file does not exist the viewer asks.
+.SH ENVIRONMENT
+.TP
+.B CRS_SITE_CONFIG
+Site overlays when no
+.B \-\-site\-config
+is given.
+.TP
+.BR CRS_CONFIG ", " CRS_GATEWAY
+Base config path and gateway override (the gateway override beats overlays).
 .SH EXAMPLES
 .EX
     crs\-tunnel open \-\-all
     crs\-tunnel status
     crs\-tunnel connect \-\-session dcs\-main
     crs\-tunnel close \-\-host mu2e\-mgr\-01
+    crs\-tunnel connect \-\-site\-config remote\-site/sites/caltech.yaml \-\-session cr01
 .EE
 .SH FILES
 .TP
 .B ~/.crs/ssh\-ctrl\-*
 SSH control sockets, one per open tunnel.
 .TP
+.B ~/.crs/tunnels.log
+Output of the tunnel ssh processes; errors are also shown by
+.BR open .
+.TP
+.B ~/.crs/viewer\-*.log
+Output of each viewer started by
+.BR connect .
+.TP
 .B config/controlroom.yaml
 Central session/gateway configuration.
 .SH SEE ALSO
 .BR crs\-remote (1),
 .BR crs\-gui (1),
+.BR crs\-screen (1),
 .BR ssh (1)
 .SH REPOSITORY
 .UR https://github.com/Mu2e/mu2edaq-controlroom-setup
