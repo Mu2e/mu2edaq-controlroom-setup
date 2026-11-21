@@ -112,7 +112,11 @@ def test_open_failure_raises(config, tmp_path, monkeypatch):
     with mock.patch.object(manager, "status", return_value="closed"), \
          mock.patch("mu2edaq_controlroom_setup.sshutil.check_ticket"), \
          mock.patch("mu2edaq_controlroom_setup.tunnels.subprocess.run") as run:
-        run.return_value = mock.Mock(returncode=255, stderr="kex error")
+        # ssh writes its errors to the tunnel log (the stderr it was given)
+        def failing_ssh(argv, stdout=None, stderr=None, **kwargs):
+            stderr.write("kex error\n")
+            return mock.Mock(returncode=255)
+        run.side_effect = failing_ssh
         with pytest.raises(RuntimeError, match="kex error"):
             manager.open(config.sessions[0])
 

@@ -1,0 +1,92 @@
+#!/usr/bin/env bash
+# crs-screen -- open Mu2e control room screens from a remote control room.
+#
+# Usage:
+#   crs-screen --site NAME SESSION [SESSION ...]   open these screens
+#   crs-screen --site NAME --check [SESSION ...]   ticket and ssh logins only
+#   crs-screen -h | --help
+#
+# For each session: get a Kerberos ticket if there is none (site keytab),
+# then `crs-tunnel connect` with the site overlay (sites/NAME.yaml), the
+# site's viewer and password files. View-only comes from the overlay.
+# Never starts or stops anything on the DAQ hosts.
+#
+# --check makes the first ssh contact with the gateway and each host on
+# purpose, so host-key questions are answered here, and reports PASS/FAIL.
+#
+# Environment: CRS_REMOTE_SITE (default for --site), DRY_RUN=1 (print the
+# commands, change nothing), CRS_NO_PAUSE=1 (do not wait for Enter on errors).
+# See remote-site/README.md and crs-screen(1).
+
+set -u
+. "$(dirname "${BASH_SOURCE[0]}")/lib/common.sh"
+
+usage() { sed -n '2,/^$/{/^#/s/^# \{0,1\}//p;}' "${BASH_SOURCE[0]}"; }
+
+site=${CRS_REMOTE_SITE:-}
+check=
+while [ $# -gt 0 ]; do
+    case $1 in
+        --site) [ $# -ge 2 ] || fail "--site needs a name"; site=$2; shift 2 ;;
+        --site=*) site=${1#*=}; shift ;;
+        --check) check=1; shift ;;
+        -h|--help) usage; exit 0 ;;
+        --) shift; break ;;
+        -*) fail "unknown option $1 (see --help)" ;;
+        *) break ;;
+    esac
+done
+[ -n "$site" ] || fail "no site given: crs-screen --site NAME SESSION ..."
+load_site "$site"
+[ -n "$check" ] || [ $# -gt 0 ] || fail "name at least one session, e.g. shift-main"
+
+connect_args() {  # SESSION -> the crs-tunnel connect argv, one per line
+    printf '%s\n' connect --config "$CRS_BASE_CONFIG" --site-config "$SITE_YAML" --session "$1"
+    [ -z "$SITE_VIEWER" ] || printf '%s\n' --viewer "$SITE_VIEWER"
+    [ -z "$SITE_PASSWORD_FILE" ] || printf '%s\n' --password-file "$SITE_PASSWORD_FILE"
+}
+
+if [ -n "${DRY_RUN:-}" ]; then
+    echo "+ ensure Kerberos ticket (${SITE_PRINCIPAL:-default principal}${SITE_KEYTAB:+, keytab $SITE_KEYTAB})"
+    for s in "$@"; do
+        printf '+ %s' "$CRS_VENV/bin/crs-tunnel"
+        connect_args "$s" | while IFS= read -r a; do printf ' %q' "$a"; done
+        echo
+    done
+    exit 0
+fi
+
+require_crs
+site_query check "$@" > /dev/null || fail "check the session names"
+ensure_ticket
+
+if [ -n "$check" ]; then
+    targets=$(site_query targets "$@") || fail "could not read the site configuration"
+    gateway=$(echo "$targets" | sed -n 1p)
+    failures=0
+    for target in $(echo "$targets" | sed 1d); do
+        echo "ssh -J $gateway $target"
+        if ssh -o GSSAPIAuthentication=yes -o GSSAPIDelegateCredentials=yes \
+               -J "$gateway" "$target" true; then
+            echo "  PASS"
+        else
+            echo "  FAIL"
+            failures=$((failures + 1))
+        fi
+    done
+    [ "$failures" -eq 0 ] || fail "$failures login(s) failed"
+    echo "All logins work."
+    exit 0
+fi
+
+for s in "$@"; do
+    args=()
+    while IFS= read -r a; do args+=("$a"); done < <(connect_args "$s")
+    "$CRS_TUNNEL" "${args[@]}" \
+        || fail "could not open $s; see ~/.crs/tunnels.log and ~/.crs/viewer-$s.log"
+done
+echo "Viewer logs: ~/.crs/viewer-<session>.log"
+if [ -n "${CRS_FROM_LAUNCHER:-}" ]; then
+    echo "This window closes in 5 s."
+    sleep 5
+fi

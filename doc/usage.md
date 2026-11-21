@@ -258,6 +258,30 @@ For example, `ports: {http: 8080}` becomes `CRS_PORT_HTTP=8080`.
 ~/controlroom/bin/crs-app list
 ```
 
+## Remote Control Rooms
+
+Remote institutions use `remote-site/` (full guide:
+[../remote-site/README.md](../remote-site/README.md)). Each site has an
+overlay `remote-site/sites/<site>.yaml` and settings
+`remote-site/sites/<site>.env`:
+
+```bash
+remote-site/install.sh --site caltech          # launchers for Linux or macOS
+remote-site/crs-screen --site caltech --check  # first ssh contact per host
+remote-site/crs-screen --site caltech shift-main cr01
+```
+
+Overlays are read by `crs-tunnel` only (`--site-config FILE`, repeatable,
+else `CRS_SITE_CONFIG`). They may set `personal_user`, `gateway`,
+`view_only` and add `sessions`; added sessions are unmanaged, and
+`crs-remote` ignores overlays and refuses unmanaged sessions.
+
+`crs-tunnel connect` also takes `--view-only` and `--password-file
+PATTERN` (`{account}`, `{session}` replaced). On macOS either one needs a
+TigerVNC viewer, because Screen Sharing cannot apply them. Tunnel ssh
+output goes to `~/.crs/tunnels.log`, viewer output to
+`~/.crs/viewer-<session>.log`.
+
 ## Configuration Overrides
 
 Configuration precedence is:
@@ -271,6 +295,7 @@ Useful environment variables:
 - `CRS_CONFIG`: alternate `controlroom.yaml`.
 - `CRS_APPS_CONFIG`: alternate `apps.yaml`.
 - `CRS_GATEWAY`: override the SSH ProxyJump host.
+- `CRS_SITE_CONFIG`: `:`-separated site overlays for `crs-tunnel` (see Remote Control Rooms).
 - `CRS_INSTALL_DIR`: override the remote install directory.
 - `CRS_GEOMETRY`: default geometry for direct server-side VNC starts.
 - `CRS_DEPTH`: default VNC color depth for direct server-side VNC starts.

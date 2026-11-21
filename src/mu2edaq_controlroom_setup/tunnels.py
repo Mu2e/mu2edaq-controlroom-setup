@@ -6,9 +6,25 @@ the gateway. Generalizes mu2edaq-controlroom/bin/start_vnc_tunnels_mu2e.sh.
 """
 
 import os
+import shlex
 import subprocess
+import sys
+import time
 
 from . import sshutil
+
+# Runs argv[1:] with SIGHUP ignored and SIGPIPE back at its default, like
+# nohup(1) but without its stdin/stdout side effects. Used instead of a
+# preexec_fn because the GUI opens tunnels from a worker thread.
+_NOHUP = ("import os, signal, sys; "
+          "signal.signal(signal.SIGHUP, signal.SIG_IGN); "
+          "signal.signal(signal.SIGPIPE, signal.SIG_DFL); "
+          "os.execvp(sys.argv[1], sys.argv[1:])")
+
+
+def nohup_argv(argv):
+    """argv that runs `argv` with SIGHUP ignored (inherited across exec)."""
+    return [sys.executable, "-c", _NOHUP] + list(argv)
 
 
 class TunnelManager:
@@ -59,10 +75,28 @@ class TunnelManager:
             self._socket(session), gateway=self.config.gateway,
             ssh_config=self.ssh_config,
         )
-        result = subprocess.run(argv, capture_output=True, text=True)
+        # ssh's output goes to a log file, not a pipe. With a gateway, the
+        # ProxyJump child (`ssh -W`) is started before authentication and
+        # inherits ssh's stderr; it keeps it open for as long as the tunnel
+        # lives, so reading a pipe to EOF (capture_output) never returns.
+        # stdin and the controlling terminal are left alone, so password and
+        # host-key prompts (read from /dev/tty) work as before. SIGHUP is
+        # ignored so the tunnel survives closing the terminal it was opened
+        # from; OpenSSH keeps an inherited SIG_IGN for SIGHUP.
+        log_path = sshutil.tunnel_log_path()
+        with open(log_path, "a") as log:
+            log.write("--- %s %s: %s\n" % (time.strftime("%Y-%m-%d %H:%M:%S"),
+                                            session.name, shlex.join(argv)))
+            log.flush()
+            start = log.tell()
+            result = subprocess.run(nohup_argv(argv), stdout=log, stderr=log)
         if result.returncode != 0:
+            with open(log_path) as log:
+                log.seek(start)
+                detail = log.read().strip()
             raise RuntimeError("tunnel open failed for %s: %s" %
-                               (session.name, result.stderr.strip()))
+                               (session.name, detail or
+                                "ssh exit status %d" % result.returncode))
         return "open"
 
     def close(self, session):

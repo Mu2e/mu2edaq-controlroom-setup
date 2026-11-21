@@ -1,0 +1,21 @@
+# Site overlay template. Copy to sites/<yoursite>.yaml (and example.env to
+# sites/<yoursite>.env), then run  remote-site/install.sh --site <yoursite>.
+# Applied by crs-tunnel on top of config/controlroom.yaml. Only these keys
+# are allowed; anything else is an error.
+
+# Account your site's Kerberos identity is authorized as on the gateway and
+# the DAQ hosts (ask the DAQ coordinator). Tunnels log in as this account.
+personal_user: mu2eshift
+
+# Gateway, with the same account in front.
+gateway: mu2eshift@mu2egateway01.fnal.gov
+
+# true: every viewer opens view-only (recommended for remote rooms). If any
+# overlay says true, a later false does not undo it.
+view_only: true
+
+# Extra screens to watch that controlroom.yaml does not list. They are
+# never started or stopped by crs-remote. Names, local ports and
+# host/display pairs must not repeat ones in controlroom.yaml.
+sessions: []
+#  - {name: cr01, host: mu2e-mgr-01.fnal.gov, account: mu2ecr01, display: 4, geometry: 1920x2160, local_port: 5961}

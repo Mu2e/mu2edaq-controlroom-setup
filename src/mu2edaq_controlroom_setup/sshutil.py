@@ -31,6 +31,13 @@ def control_socket_path(host, port):
     return os.path.join(run_dir, "ssh-ctrl-%s-%d" % (host.split(".")[0], port))
 
 
+def tunnel_log_path():
+    """Log file for the ssh processes that hold tunnels, in ~/.crs."""
+    run_dir = os.path.expanduser("~/.crs")
+    os.makedirs(run_dir, exist_ok=True)
+    return os.path.join(run_dir, "tunnels.log")
+
+
 def base_ssh_args(gateway=None, ssh_config=None):
     """Common ssh arguments: GSSAPI auth and optional ProxyJump/config."""
     args = ["ssh",
