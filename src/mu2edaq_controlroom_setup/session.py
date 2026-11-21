@@ -14,6 +14,9 @@ class Session:
     geometry: str = "1920x1080"
     depth: int = 24
     local_port: int = 0
+    # False for sessions added by a site overlay: crs-remote never starts,
+    # stops, installs or provisions them. Says nothing about VNC input.
+    managed: bool = True
 
     @property
     def vnc_port(self):
@@ -39,6 +42,9 @@ class ControlRoomConfig:
     discovery: dict
     accounts: list
     sessions: list = field(default_factory=list)
+    # True if any site overlay asks for it: crs-tunnel connect then opens
+    # every viewer view-only.
+    view_only: bool = False
 
     def session(self, name):
         for s in self.sessions:

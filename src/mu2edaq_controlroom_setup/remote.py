@@ -24,6 +24,18 @@ PAYLOAD_FILES = [
 ]
 
 
+class UnmanagedSessionError(RuntimeError):
+    """A lifecycle operation was asked for on a site-overlay session."""
+
+
+def _require_managed(session):
+    if not session.managed:
+        raise UnmanagedSessionError(
+            "session %s comes from a site overlay and is not managed here; "
+            "crs-remote never starts, stops, installs or provisions it"
+            % session.name)
+
+
 class RemoteRunner:
     def __init__(self, config, ssh_config=None, config_dir=None):
         self.config = config
@@ -41,21 +53,25 @@ class RemoteRunner:
     # -- per-session operations --------------------------------------------
 
     def start(self, session):
+        _require_managed(session)
         cmd = ("~/controlroom/bin/start-vnc-session.sh %s %d -g %s -d %d" %
                (session.name, session.display, session.geometry, session.depth))
         return self._run(session.target, cmd)
 
     def stop(self, session):
+        _require_managed(session)
         cmd = ("~/controlroom/bin/stop-vnc-session.sh %s %d" %
                (session.name, session.display))
         return self._run(session.target, cmd)
 
     def status(self, session):
+        _require_managed(session)
         cmd = ("~/controlroom/bin/status-vnc-session.sh %s %d" %
                (session.name, session.display))
         return self._run(session.target, cmd)
 
     def provision(self, session):
+        _require_managed(session)
         cmd = "~/controlroom/bin/crs-provision-desktop --session %s" % session.name
         return self._run(session.target, cmd)
 
@@ -79,6 +95,7 @@ class RemoteRunner:
 
     def install(self, session):
         """Ship the payload to the session account and run the installer."""
+        _require_managed(session)
         sshutil.check_ticket()
         payload = self._build_payload()
         argv = sshutil.base_ssh_args(self.config.gateway, self.ssh_config) + [

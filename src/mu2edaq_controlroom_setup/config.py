@@ -9,6 +9,14 @@ Environment overrides:
     CRS_APPS_CONFIG  path to apps.yaml
     CRS_GATEWAY      ProxyJump host
     CRS_INSTALL_DIR  bin install area on the DAQ hosts
+
+Site overlays (remote control rooms): load_config(path, overlays=[...])
+applies small YAML files on top of controlroom.yaml. Only crs-tunnel
+passes overlays (from --site-config, else CRS_SITE_CONFIG; see
+site_overlay_paths); load_config never reads CRS_SITE_CONFIG itself, so
+crs-remote and crs-gui never see overlay sessions. An overlay may set
+personal_user and gateway (last file wins), view_only (true in any file
+wins) and add sessions, which are loaded with managed=False.
 """
 
 import os
@@ -30,6 +38,8 @@ _DEFAULTS = {
 
 _GEOMETRY_RE = re.compile(r"^\d{3,5}x\d{3,5}$")
 
+_OVERLAY_KEYS = ("personal_user", "gateway", "view_only", "sessions")
+
 
 class ConfigError(ValueError):
     pass
@@ -48,39 +58,86 @@ def _default_config_path(filename):
     return candidates[-1]
 
 
-def load_config(path=None):
-    """Load controlroom.yaml into a validated ControlRoomConfig."""
-    path = path or os.environ.get("CRS_CONFIG") or _default_config_path("controlroom.yaml")
+def site_overlay_paths(cli_paths=None):
+    """Overlay files for crs-tunnel: --site-config values if any were given,
+    else the ':'-separated CRS_SITE_CONFIG, else none."""
+    if cli_paths:
+        paths = list(cli_paths)
+    else:
+        paths = [p for p in os.environ.get("CRS_SITE_CONFIG", "").split(":") if p]
+    return [os.path.expanduser(p) for p in paths]
+
+
+def _read_yaml(path, missing_message):
     try:
         with open(path) as fh:
             raw = yaml.safe_load(fh) or {}
     except FileNotFoundError:
-        raise ConfigError("config file not found: %s" % path)
+        raise ConfigError(missing_message % path)
+    if not isinstance(raw, dict):
+        raise ConfigError("%s: expected a YAML mapping at the top level" % path)
+    return raw
+
+
+def _session(entry, i, managed=True, where=""):
+    try:
+        return Session(
+            name=entry["name"],
+            host=entry["host"],
+            account=entry["account"],
+            display=int(entry["display"]),
+            geometry=str(entry.get("geometry", "1920x1080")),
+            depth=int(entry.get("depth", 24)),
+            local_port=int(entry.get("local_port", 0)),
+            managed=managed,
+        )
+    except KeyError as exc:
+        raise ConfigError("%ssession %d: missing required key %s" % (where, i, exc))
+
+
+def load_config(path=None, overlays=()):
+    """Load controlroom.yaml into a validated ControlRoomConfig.
+
+    overlays: site overlay files applied on top, in order (see module doc).
+    """
+    path = path or os.environ.get("CRS_CONFIG") or _default_config_path("controlroom.yaml")
+    raw = _read_yaml(path, "config file not found: %s")
 
     merged = dict(_DEFAULTS)
     merged.update({k: v for k, v in raw.items() if k != "sessions"})
+    view_only = bool(raw.get("view_only", False))
+
+    sessions = [_session(entry, i) for i, entry in enumerate(raw.get("sessions") or [])]
+    origins = [None] * len(sessions)
+
+    for opath in overlays:
+        where = "site config %s: " % opath
+        oraw = _read_yaml(opath, "site config not found: %s")
+        extra = sorted(set(oraw) - set(_OVERLAY_KEYS))
+        if extra:
+            raise ConfigError("%skeys not allowed in a site overlay: %s (allowed: %s)"
+                              % (where, ", ".join(extra), ", ".join(_OVERLAY_KEYS)))
+        for key in ("personal_user", "gateway"):
+            if key in oraw:
+                merged[key] = oraw[key]
+        if "view_only" in oraw:
+            if not isinstance(oraw["view_only"], bool):
+                raise ConfigError("%sview_only must be true or false" % where)
+            view_only = view_only or oraw["view_only"]
+        for i, entry in enumerate(oraw.get("sessions") or []):
+            if "managed" in entry:
+                raise ConfigError("%ssession %d: 'managed' cannot be set in a site "
+                                  "overlay; overlay sessions are never managed" % (where, i))
+            sessions.append(_session(entry, i, managed=False, where=where))
+            origins.append(opath)
+
     if os.environ.get("CRS_GATEWAY"):
         merged["gateway"] = os.environ["CRS_GATEWAY"]
     if os.environ.get("CRS_INSTALL_DIR"):
         merged["install_dir"] = os.environ["CRS_INSTALL_DIR"]
 
-    sessions = []
-    for i, entry in enumerate(raw.get("sessions", [])):
-        try:
-            sessions.append(Session(
-                name=entry["name"],
-                host=entry["host"],
-                account=entry["account"],
-                display=int(entry["display"]),
-                geometry=str(entry.get("geometry", "1920x1080")),
-                depth=int(entry.get("depth", 24)),
-                local_port=int(entry.get("local_port", 0)),
-            ))
-        except KeyError as exc:
-            raise ConfigError("session %d: missing required key %s" % (i, exc))
-
-    _validate_sessions(sessions)
-    cfg = ControlRoomConfig(sessions=sessions, **{
+    _validate_sessions(sessions, origins)
+    cfg = ControlRoomConfig(sessions=sessions, view_only=view_only, **{
         k: merged[k] for k in
         ("gateway", "personal_user", "install_dir", "vnc_password_file",
          "discovery", "accounts")
@@ -88,28 +145,34 @@ def load_config(path=None):
     return cfg
 
 
-def _validate_sessions(sessions):
+def _validate_sessions(sessions, origins=None):
+    """Reject duplicate names, local ports and host displays. origins[i] is
+    the overlay file session i came from (None for controlroom.yaml), named
+    in the error so a site knows which file to fix."""
+    origins = origins or [None] * len(sessions)
     names = set()
     local_ports = set()
     per_host_displays = set()
-    for s in sessions:
+    for s, origin in zip(sessions, origins):
+        where = " (in site config %s)" % origin if origin else ""
         if s.name in names:
-            raise ConfigError("duplicate session name: %s" % s.name)
+            raise ConfigError("duplicate session name: %s%s" % (s.name, where))
         names.add(s.name)
         if not _GEOMETRY_RE.match(s.geometry):
-            raise ConfigError("session %s: bad geometry %r (want WxH)" %
-                              (s.name, s.geometry))
+            raise ConfigError("session %s: bad geometry %r (want WxH)%s" %
+                              (s.name, s.geometry, where))
         if s.display < 1 or s.display > 99:
-            raise ConfigError("session %s: display %d out of range 1-99" %
-                              (s.name, s.display))
+            raise ConfigError("session %s: display %d out of range 1-99%s" %
+                              (s.name, s.display, where))
         key = (s.host, s.display)
         if key in per_host_displays:
-            raise ConfigError("duplicate display :%d on host %s" % (s.display, s.host))
+            raise ConfigError("duplicate display :%d on host %s%s" %
+                              (s.display, s.host, where))
         per_host_displays.add(key)
         if s.local_port:
             if s.local_port in local_ports:
-                raise ConfigError("duplicate local_port %d (session %s)" %
-                                  (s.local_port, s.name))
+                raise ConfigError("duplicate local_port %d (session %s)%s" %
+                                  (s.local_port, s.name, where))
             local_ports.add(s.local_port)
 
 

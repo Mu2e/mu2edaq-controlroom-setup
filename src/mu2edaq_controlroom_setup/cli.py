@@ -3,8 +3,8 @@
 import argparse
 import sys
 
-from .config import ConfigError, load_config
-from .remote import RemoteRunner
+from .config import ConfigError, load_config, site_overlay_paths
+from .remote import RemoteRunner, UnmanagedSessionError
 from .sshutil import KerberosError
 from .tunnels import TunnelManager
 from . import viewer as viewer_mod
@@ -37,6 +37,11 @@ def tunnel_main(argv=None):
     _common_args(parser)
     parser.add_argument("--viewer", default=None,
                         help="VNC viewer binary (connect only)")
+    parser.add_argument("--site-config", action="append", default=None,
+                        metavar="PATH",
+                        help="site overlay YAML on top of controlroom.yaml; "
+                             "repeatable, applied in order (default: "
+                             "$CRS_SITE_CONFIG, ':'-separated)")
     parser.add_argument("--view-only", action="store_true",
                         help="open the viewer view-only (connect only; "
                              "on macOS this needs TigerVNC)")
@@ -47,7 +52,8 @@ def tunnel_main(argv=None):
     args = parser.parse_args(argv)
 
     try:
-        config = load_config(args.config)
+        config = load_config(args.config,
+                             overlays=site_overlay_paths(args.site_config))
     except ConfigError as exc:
         sys.exit("error: %s" % exc)
     manager = TunnelManager(config, ssh_config=args.ssh_config)
@@ -73,7 +79,7 @@ def tunnel_main(argv=None):
                        session.host.split(".")[0], session.vnc_port,
                        session.account))
             elif args.command == "connect":
-                view_only = args.view_only
+                view_only = args.view_only or config.view_only
                 password_file = viewer_mod.resolve_password_file(
                     args.password_file, session)
                 if args.password_file and not password_file:
@@ -103,6 +109,8 @@ def remote_main(argv=None):
     args = parser.parse_args(argv)
 
     try:
+        # Never with site overlays: crs-remote acts on the managed sessions
+        # in controlroom.yaml only.
         config = load_config(args.config)
     except ConfigError as exc:
         sys.exit("error: %s" % exc)
@@ -110,7 +118,7 @@ def remote_main(argv=None):
 
     if args.command == "status" and not (args.session or args.host or args.all):
         args.all = True
-    sessions = _select(config, args)
+    sessions = lifecycle_sessions(_select(config, args), explicit=bool(args.session))
 
     # install runs once per (host, account), not once per session.
     if args.command == "install":
@@ -136,9 +144,19 @@ def remote_main(argv=None):
                 failures += 1
                 for line in err.strip().splitlines():
                     print("[%s] ERR %s" % (prefix, line), file=sys.stderr)
-    except KerberosError as exc:
+    except (KerberosError, UnmanagedSessionError) as exc:
         sys.exit("error: %s" % exc)
     return 1 if failures else 0
+
+
+def lifecycle_sessions(sessions, explicit=False):
+    """Sessions crs-remote may act on: unmanaged (site overlay) sessions are
+    dropped from --all/--host selections and refused when named."""
+    unmanaged = [s.name for s in sessions if not s.managed]
+    if explicit and unmanaged:
+        sys.exit("error: session %s comes from a site overlay; crs-remote "
+                 "never starts, stops, installs or provisions it" % unmanaged[0])
+    return [s for s in sessions if s.managed]
 
 
 if __name__ == "__main__":
