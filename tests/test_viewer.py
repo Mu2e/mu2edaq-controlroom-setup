@@ -109,3 +109,9 @@ def test_resolve_password_file(tmp_path):
     assert viewer_mod.resolve_password_file(
         str(tmp_path / "{session}.passwd"), _session()) is None
     assert viewer_mod.resolve_password_file(None, _session()) is None
+
+
+def test_password_file_path_expands_home(tmp_path):
+    assert viewer_mod.password_file_path("~/.vnc/{account}.passwd", _session()) == \
+        str(tmp_path / ".vnc" / "mu2edcs.passwd")
+    assert viewer_mod.password_file_path("", _session()) is None

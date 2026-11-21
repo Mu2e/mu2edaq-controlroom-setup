@@ -85,12 +85,15 @@ def tunnel_main(argv=None):
                 if args.password_file and not password_file:
                     print("%-12s no password file for %s; the viewer will ask" %
                           (session.name, session.account))
+                # Find the viewer first, so a missing one stops us before
+                # any ssh is started.
+                command = viewer_mod.viewer_argv(
+                    session, viewer=args.viewer, view_only=view_only,
+                    password_file=password_file)
                 if manager.status(session) != "open":
                     manager.open(session)
                     print("%-12s tunnel opened" % session.name)
-                viewer_mod.attach(session, viewer=args.viewer,
-                                  view_only=view_only,
-                                  password_file=password_file)
+                viewer_mod.launch(command, session)
                 print("%-12s viewer launched (localhost:%d%s)" %
                       (session.name, session.local_port,
                        ", view-only" if view_only else ""))

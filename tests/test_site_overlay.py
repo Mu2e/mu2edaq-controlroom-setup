@@ -195,12 +195,15 @@ def test_lifecycle_sessions_filters_and_refuses(base, site):
 # -- crs-tunnel still reaches overlay sessions -------------------------------
 
 def _tunnel(argv):
+    """Run crs-tunnel with ssh mocked; returns (ssh run mock, viewer_argv mock)."""
     with mock.patch("mu2edaq_controlroom_setup.sshutil.check_ticket"), \
          mock.patch("mu2edaq_controlroom_setup.tunnels.subprocess.run") as run, \
-         mock.patch("mu2edaq_controlroom_setup.viewer.attach") as attach:
+         mock.patch("mu2edaq_controlroom_setup.viewer.viewer_argv",
+                    return_value=["viewer"]) as viewer_argv, \
+         mock.patch("mu2edaq_controlroom_setup.viewer.launch"):
         run.return_value = mock.Mock(returncode=0)
         cli.tunnel_main(argv)
-    return run, attach
+    return run, viewer_argv
 
 
 def test_tunnel_status_lists_overlay_sessions(base, site, capsys):
@@ -239,3 +242,21 @@ def test_connect_uses_site_view_only(base, site, monkeypatch):
 def test_connect_without_site_is_not_view_only(base):
     _, attach = _tunnel(["connect", "--config", base, "--session", "shift-main"])
     assert attach.call_args[1]["view_only"] is False
+
+
+def test_connect_checks_viewer_before_any_ssh(base, site, monkeypatch):
+    """macOS, view-only site, no TigerVNC: stop before opening the tunnel."""
+    from mu2edaq_controlroom_setup import viewer as viewer_mod
+    monkeypatch.setattr(viewer_mod.sys, "platform", "darwin")
+    with mock.patch("mu2edaq_controlroom_setup.viewer.find_viewer", return_value=None), \
+         mock.patch("mu2edaq_controlroom_setup.sshutil.check_ticket"), \
+         mock.patch("mu2edaq_controlroom_setup.tunnels.TunnelManager.open") as tunnel_open, \
+         mock.patch("mu2edaq_controlroom_setup.tunnels.subprocess.run") as run, \
+         mock.patch("mu2edaq_controlroom_setup.viewer.subprocess.Popen") as popen:
+        with pytest.raises(SystemExit) as exc:
+            cli.tunnel_main(["connect", "--config", base, "--site-config", site,
+                             "--session", "cr01"])
+    assert "TigerVNC" in str(exc.value.code)
+    tunnel_open.assert_not_called()
+    run.assert_not_called()
+    popen.assert_not_called()

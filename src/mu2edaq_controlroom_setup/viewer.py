@@ -27,6 +27,16 @@ def find_viewer():
     return None
 
 
+def password_file_path(pattern, session):
+    """Expand a password-file pattern for a session: {account}, {session}
+    and a leading ~. Returns None for an empty pattern. Does not check that
+    the file exists."""
+    if not pattern:
+        return None
+    return os.path.expanduser(pattern.format(account=session.account,
+                                             session=session.name))
+
+
 def resolve_password_file(pattern, session):
     """Password file for a session from a pattern, or None.
 
@@ -34,11 +44,8 @@ def resolve_password_file(pattern, session):
     ~/.vnc/{account}.passwd. Returns None when the pattern is empty or the
     file does not exist (the viewer then asks for the password).
     """
-    if not pattern:
-        return None
-    path = os.path.expanduser(pattern.format(account=session.account,
-                                             session=session.name))
-    return path if os.path.isfile(path) else None
+    path = password_file_path(pattern, session)
+    return path if path and os.path.isfile(path) else None
 
 
 def _log_path(session):
@@ -61,20 +68,18 @@ def _spawn(argv, session):
         )
 
 
-def attach(session, viewer=None, view_only=False, password_file=None):
-    """Launch a VNC client against the session's local tunnel port.
+def viewer_argv(session, viewer=None, view_only=False, password_file=None):
+    """The command that attach() would run, without running it.
 
-    Returns the Popen handle (caller does not wait). On macOS, with no
-    explicit viewer and neither view_only nor password_file, uses
-    `open vnc://localhost:PORT` (Screen Sharing); otherwise runs
+    On macOS, with no explicit viewer and neither view_only nor
+    password_file: `open vnc://localhost:PORT` (Screen Sharing). Otherwise
     `vncviewer -Shared [-ViewOnly] [PasswordFile=F] localhost::PORT`.
-    Raises RuntimeError, before launching anything, if no suitable viewer
-    is found.
+    Raises RuntimeError if no suitable viewer is found, so callers can
+    check before opening a tunnel.
     """
     needs_vncviewer = view_only or bool(password_file)
     if viewer is None and sys.platform == "darwin" and not needs_vncviewer:
-        return _spawn(["open", "vnc://localhost:%d" % session.local_port],
-                      session)
+        return ["open", "vnc://localhost:%d" % session.local_port]
     viewer = viewer or find_viewer()
     if not viewer:
         if sys.platform == "darwin":
@@ -91,4 +96,19 @@ def attach(session, viewer=None, view_only=False, password_file=None):
         argv.append("PasswordFile=%s" % password_file)
     # host::port is read as a TCP port by both TigerVNC and RealVNC viewers
     argv.append("localhost::%d" % session.local_port)
+    return argv
+
+
+def launch(argv, session):
+    """Start a viewer command from viewer_argv(); returns the Popen handle."""
     return _spawn(argv, session)
+
+
+def attach(session, viewer=None, view_only=False, password_file=None):
+    """Launch a VNC client against the session's local tunnel port.
+
+    Returns the Popen handle (caller does not wait). See viewer_argv() for
+    the command; raises RuntimeError, before launching anything, if no
+    suitable viewer is found.
+    """
+    return _spawn(viewer_argv(session, viewer, view_only, password_file), session)
