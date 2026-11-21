@@ -37,6 +37,13 @@ def tunnel_main(argv=None):
     _common_args(parser)
     parser.add_argument("--viewer", default=None,
                         help="VNC viewer binary (connect only)")
+    parser.add_argument("--view-only", action="store_true",
+                        help="open the viewer view-only (connect only; "
+                             "on macOS this needs TigerVNC)")
+    parser.add_argument("--password-file", default=None, metavar="PATTERN",
+                        help="VNC password file for the viewer, may contain "
+                             "{account} and {session}, e.g. "
+                             "~/.vnc/{account}.passwd (connect only)")
     args = parser.parse_args(argv)
 
     try:
@@ -66,12 +73,21 @@ def tunnel_main(argv=None):
                        session.host.split(".")[0], session.vnc_port,
                        session.account))
             elif args.command == "connect":
+                view_only = args.view_only
+                password_file = viewer_mod.resolve_password_file(
+                    args.password_file, session)
+                if args.password_file and not password_file:
+                    print("%-12s no password file for %s; the viewer will ask" %
+                          (session.name, session.account))
                 if manager.status(session) != "open":
                     manager.open(session)
                     print("%-12s tunnel opened" % session.name)
-                viewer_mod.attach(session, viewer=args.viewer)
-                print("%-12s viewer launched (localhost:%d)" %
-                      (session.name, session.local_port))
+                viewer_mod.attach(session, viewer=args.viewer,
+                                  view_only=view_only,
+                                  password_file=password_file)
+                print("%-12s viewer launched (localhost:%d%s)" %
+                      (session.name, session.local_port,
+                       ", view-only" if view_only else ""))
     except (KerberosError, RuntimeError) as exc:
         sys.exit("error: %s" % exc)
     return 0
