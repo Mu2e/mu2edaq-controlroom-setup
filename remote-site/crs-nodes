@@ -1,0 +1,44 @@
+#!/usr/bin/env bash
+# crs-nodes -- log in to a Mu2e DAQ machine from a remote control room.
+#
+# Usage:
+#   crs-nodes --site NAME
+#   crs-nodes -h | --help
+#
+# Gets a Kerberos ticket if there is none (site keytab), then opens the DAQ
+# machine picker, ssh-selector from mu2edaq-cluster-tools, on its Mu2e DAQ
+# host list. Pick the account the site's identity is allowed to use (the
+# site overlay's personal_user). remote-site/install.sh installs
+# ssh-selector when ../mu2edaq-cluster-tools is checked out.
+#
+# Environment: CRS_REMOTE_SITE (default for --site), DRY_RUN=1 (print the
+# command, change nothing), CRS_NO_PAUSE=1 (do not wait for Enter on errors).
+
+set -u
+. "$(dirname "${BASH_SOURCE[0]}")/lib/common.sh"
+
+usage() { sed -n '2,/^$/{/^#/s/^# \{0,1\}//p;}' "${BASH_SOURCE[0]}"; }
+
+site=${CRS_REMOTE_SITE:-}
+while [ $# -gt 0 ]; do
+    case $1 in
+        --site) [ $# -ge 2 ] || fail "--site needs a name"; site=$2; shift 2 ;;
+        --site=*) site=${1#*=}; shift ;;
+        -h|--help) usage; exit 0 ;;
+        *) fail "unknown argument $1 (see --help)" ;;
+    esac
+done
+[ -n "$site" ] || fail "no site given: crs-nodes --site NAME"
+load_site "$site"
+
+if [ -n "${DRY_RUN:-}" ]; then
+    echo "+ ensure Kerberos ticket (${SITE_PRINCIPAL:-default principal}${SITE_KEYTAB:+, keytab $SITE_KEYTAB})"
+    printf '+ %q -c %q\n' "${SITE_SSH_SELECTOR:-ssh-selector}" "$SITE_DAQ_HOSTS"
+    exit 0
+fi
+
+[ -n "$SITE_SSH_SELECTOR" ] && [ -x "$SITE_SSH_SELECTOR" ] \
+    || fail "ssh-selector is not installed: run  $REMOTE_SITE_DIR/install.sh --site $site  with ../mu2edaq-cluster-tools checked out"
+[ -f "$SITE_DAQ_HOSTS" ] || fail "no DAQ host list at $SITE_DAQ_HOSTS"
+ensure_ticket
+"$SITE_SSH_SELECTOR" -c "$SITE_DAQ_HOSTS" || fail "ssh-selector stopped with an error"

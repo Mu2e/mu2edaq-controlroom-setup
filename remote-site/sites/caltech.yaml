@@ -1,0 +1,24 @@
+# Site overlay for the Caltech remote control room (ROC box novacr02).
+# Applied by crs-tunnel on top of config/controlroom.yaml; see
+# remote-site/README.md for the keys an overlay may set.
+
+# The Caltech Kerberos identity is authorized as mu2eshift on the gateway
+# and on mu2e-mgr-01, so tunnels log in as mu2eshift.
+personal_user: mu2eshift
+gateway: mu2eshift@mu2egateway01.fnal.gov
+
+# Remote rooms watch; the Fermilab control room drives.
+view_only: true
+
+# The six control room screens on mu2e-mgr-01, run by systemd vncserver@:N
+# as mu2ecr01..06 on displays :4..:9, 1920x2160 each (as listed in
+# mu2edaq-shifter-tools config/novnc-sessions.yaml, 2026-10-28). Local
+# ports 5961-5966 stay clear of controlroom.yaml's 595x. They are not
+# managed: crs-remote never starts or stops them.
+sessions:
+  - {name: cr01, host: mu2e-mgr-01.fnal.gov, account: mu2ecr01, display: 4, geometry: 1920x2160, local_port: 5961}
+  - {name: cr02, host: mu2e-mgr-01.fnal.gov, account: mu2ecr02, display: 5, geometry: 1920x2160, local_port: 5962}
+  - {name: cr03, host: mu2e-mgr-01.fnal.gov, account: mu2ecr03, display: 6, geometry: 1920x2160, local_port: 5963}
+  - {name: cr04, host: mu2e-mgr-01.fnal.gov, account: mu2ecr04, display: 7, geometry: 1920x2160, local_port: 5964}
+  - {name: cr05, host: mu2e-mgr-01.fnal.gov, account: mu2ecr05, display: 8, geometry: 1920x2160, local_port: 5965}
+  - {name: cr06, host: mu2e-mgr-01.fnal.gov, account: mu2ecr06, display: 9, geometry: 1920x2160, local_port: 5966}
